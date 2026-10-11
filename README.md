@@ -2,7 +2,7 @@
 
 Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
 
-> **Status**: código-fonte da versão 0.3.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+> **Status**: código-fonte da versão 0.3.1. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
 
 ## Funcionalidades
 
@@ -21,14 +21,28 @@ Aplicativo Android **offline e sem login** para registrar rapidamente corridas, 
 
 ## Build sem Android Studio
 
-1. Em GitHub, abra **Actions → Gerar APK Android**.
+1. Em GitHub, abra **Actions → Gerar APK Android assinado**.
 2. Aguarde o job `build` finalizar.
-3. Abra os **Artifacts** do job e baixe `Primo-APK`.
-4. Extraia o ZIP para obter o APK de depuração e instale no Redmi 13C, permitindo instalação de fontes externas somente para essa ação.
+3. Abra os **Artifacts** do job e baixe `Primo-APK-Release`.
+4. Extraia o ZIP para obter o APK release assinado e instale no Redmi 13C, permitindo instalação de fontes externas somente para essa ação.
 
 O projeto usa Android Gradle Plugin 9.1.1, Java 17, Gradle 9.3.1 e Android SDK 36, com Kotlin compilado pelo plugin Android. Você pode compilar localmente usando `gradle :app:assembleDebug` se tiver o Android SDK.
 
 **Atenção à assinatura:** APK debug é assinado automaticamente com uma chave temporária que muda entre ambientes/builds de CI. Para atualizar a instalação sem perder dados, configure uma keystore permanente nos secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` e utilize APK release assinado. Guarde a keystore em local seguro; não faça commit dela no repositório. Antes de trocar a assinatura, exporte backup e só então reinstale.
+
+### Assinatura permanente (Primo 0.3.1 em diante)
+
+Desde 0.3.1, o GitHub Actions **não gera APK debug se faltarem as credenciais**. O build exige um único certificado permanente e verifica sua identidade antes e depois da compilação. A chave NÃO faz parte deste repositório público.
+
+1. Extraia o ZIP privado de assinatura entregue separadamente ao proprietário. Guarde-o com segurança (backup offline).
+2. No Windows com GitHub CLI (`gh`) autenticado, entre na pasta extraída e execute: `gh secret set -R Daniel-SLima/AN-Corridas -f primo-gh-secrets.env`. Ou cadastre os 4 secrets manualmente em Settings → Secrets and variables → Actions.
+3. Abra Actions → Gerar APK Android assinado → Run workflow. Baixe o arquivo `Primo-APK-Release`.
+4. **Migração da v0.3.0 debug:** antes de desinstalar, use Exportar backup. Instale a primeira release com assinatura permanente e use Importar backup. A chave privada da v0.3.0 debug não está disponível, portanto é necessária uma última desinstalação.
+5. Futuras versões devem manter o `applicationId`, a mesma keystore e `versionCode` crescente para atualizar por cima preservando registros.
+
+Impressão digital pública SHA-256: `12:53:89:DE:DA:49:21:5B:78:19:4D:B9:31:2D:D1:E1:1E:86:DE:F7:97:E0:0E:07:80:59:02:96:AD:F4:BF:D3`.
+
+**NUNCA** publique a keystore `.jks`, `primo-gh-secrets.env` ou senhas em commits, issues ou prints.
 
 ## Uso da bolinha no Xiaomi
 

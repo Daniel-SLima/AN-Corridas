@@ -1,4 +1,4 @@
-name: Gerar APK Android
+name: Gerar APK Android assinado
 on:
   workflow_dispatch:
   push:
@@ -19,6 +19,15 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v4
+
+      - name: Exigir assinatura permanente
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "ERRO: configure os 4 secrets ANDROID_KEYSTORE_*; não geraremos APK debug temporário." >&2
+            exit 1
+          fi
       - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
@@ -36,27 +45,45 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
-      - name: Preparar assinatura estável (se configurada)
+      - name: Carregar e conferir chave permanente
         shell: bash
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            test -n "$ANDROID_KEYSTORE_PASSWORD" || exit 1
-            test -n "$ANDROID_KEY_ALIAS" || exit 1
-            test -n "$ANDROID_KEY_PASSWORD" || exit 1
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/production-keystore.jks
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/production-keystore.jks
+          EXPECTED=$(tr -d '\r\n' < .github/PRIMO_SIGNING_SHA256)
+          ACTUAL=$(keytool -list -v -keystore app/production-keystore.jks \
+            -alias "$ANDROID_KEY_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" 2>/dev/null \
+            | sed -n 's/^[[:space:]]*SHA256: //p' | head -n1 | tr -d '\r\n')
+          if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+            echo 'ERRO: chave não corresponde à assinatura oficial do Primo.' >&2
+            exit 1
           fi
-      - name: Compilar APK instalável
+          echo 'Assinatura permanente conferida.'
+      - name: Compilar APK release assinado
+        shell: bash
+        run: gradle --no-daemon :app:assembleRelease
+      - name: Verificar certificado do APK
         shell: bash
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            gradle --no-daemon :app:assembleRelease
-          else
-            gradle --no-daemon :app:assembleDebug
-          fi
-      - name: Publicar APK no GitHub Actions
+          set -euo pipefail
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --min-sdk-version 26 --print-certs "$APK" > "$RUNNER_TEMP/apk-verification.txt"
+          EXPECTED=$(tr -d ':' < .github/PRIMO_SIGNING_SHA256 | tr '[:upper:]' '[:lower:]' | tr -d '\r\n')
+          grep -F "Signer #1 certificate SHA-256 digest: $EXPECTED" "$RUNNER_TEMP/apk-verification.txt" >/dev/null || {
+            echo 'ERRO: APK não tem a assinatura oficial do Primo.' >&2
+            exit 1
+          }
+          echo 'APK assinado com chave permanente validada.'
+      - name: Apagar cópia temporária da chave
+        if: always()
+        shell: bash
+        run: rm -f app/production-keystore.jks
+      - name: Publicar APK release
         uses: actions/upload-artifact@v4
         with:
-          name: Primo-APK
-          path: app/build/outputs/apk/**/*.apk
+          name: Primo-APK-Release
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14

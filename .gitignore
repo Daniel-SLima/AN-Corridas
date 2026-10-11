@@ -9,3 +9,7 @@ app/build/
 .DS_Store
 *.jks
 *.keystore
+
+# Credenciais de assinatura fora do repositório
+primo-gh-secrets.env
+*.env
