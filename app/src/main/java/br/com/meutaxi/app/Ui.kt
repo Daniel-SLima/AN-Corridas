@@ -9,6 +9,8 @@ import android.view.Gravity
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.animation.ObjectAnimator
+import android.view.animation.DecelerateInterpolator
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -52,6 +54,22 @@ object Ui {
             background = rounded(color,context)
             minHeight = dp(context,52)
         }
+
+    fun iconButton(context: Context, label: String, icon: String, color: Int = BLUE): Button =
+        button(context,label,color).apply {
+            val tint = if (color == YELLOW) DARK else Color.WHITE
+            setCompoundDrawablesWithIntrinsicBounds(primoIcon(context,icon,tint,23),null,null,null)
+            compoundDrawablePadding = dp(context,11)
+            gravity = Gravity.CENTER
+            setPadding(dp(context,14),0,dp(context,14),0)
+            contentDescription = label
+        }
+
+    fun tapFeedback(view: View) {
+        view.animate().scaleX(0.97f).scaleY(0.97f).setDuration(80L)
+            .withEndAction { view.animate().scaleX(1f).scaleY(1f)
+                .setInterpolator(DecelerateInterpolator()).setDuration(145L).start() }.start()
+    }
 
     fun gap(context: Context, height: Int): View = View(context).apply {
         layoutParams = LinearLayout.LayoutParams(1, dp(context,height))

@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.animation.ObjectAnimator
+import android.view.animation.DecelerateInterpolator
 import android.widget.Switch
 import android.widget.EditText
 import android.text.InputType
@@ -35,6 +37,9 @@ class MainActivity : Activity() {
     private lateinit var db: EntriesDb
     private lateinit var goals: GoalsStore
     private lateinit var content: LinearLayout
+    private lateinit var scroller: ScrollView
+    private lateinit var navigation: LinearLayout
+    private var tab = 0
     private var period = 0
     private var selectedDate: LocalDate = LocalDate.now()
     private val backupExportCode = 501
@@ -46,13 +51,24 @@ class MainActivity : Activity() {
         goals = GoalsStore(this)
         window.statusBarColor = 0xFF0B4F8A.toInt()
         window.navigationBarColor = 0xFFF7F9FC.toInt()
-        val scroller = ScrollView(this).apply {
+        scroller = ScrollView(this).apply {
             setBackgroundColor(0xFFF7F9FC.toInt())
             isFillViewport = true
         }
         content = Ui.column(this,18)
         scroller.addView(content)
-        setContentView(scroller)
+        navigation = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(Ui.dp(this@MainActivity,8),Ui.dp(this@MainActivity,5),
+                Ui.dp(this@MainActivity,8),Ui.dp(this@MainActivity,5))
+            setBackgroundColor(Color.WHITE)
+            elevation = Ui.dp(this@MainActivity,8).toFloat()
+        }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(scroller,LinearLayout.LayoutParams(-1,0,1f))
+        root.addView(navigation,LinearLayout.LayoutParams(-1,Ui.dp(this,71)))
+        setContentView(root)
         draw()
     }
 
@@ -64,13 +80,27 @@ class MainActivity : Activity() {
     private fun add(text: String, size: Float = 16f, bold: Boolean = false): TextView =
         Ui.text(this,text,size,bold).also { content.addView(it) }
 
-    private fun action(label: String, color: Int = Ui.BLUE, task: () -> Unit) {
+    private fun action(label: String, color: Int = Ui.BLUE, icon: String? = null, task: () -> Unit) {
         content.addView(Ui.gap(this,7))
-        content.addView(Ui.button(this,label,color).apply { setOnClickListener { task() } })
+        val button = if (icon == null) Ui.button(this,label,color)
+                     else Ui.iconButton(this,label,icon,color)
+        content.addView(button.apply {
+            setOnClickListener { Ui.tapFeedback(this); task() }
+        })
     }
 
     private fun draw() {
         content.removeAllViews()
+        when (tab) {
+            1 -> drawHistoryPage()
+            2 -> drawGoalsPage()
+            3 -> drawMorePage()
+            else -> drawHome()
+        }
+        drawNavigation()
+    }
+
+    private fun drawHome() {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -98,7 +128,7 @@ class MainActivity : Activity() {
         val enabled = getSharedPreferences("state",MODE_PRIVATE).getBoolean("overlay_running",false)
         val canOverlay = Settings.canDrawOverlays(this)
         when {
-            !canOverlay -> action("Permitir bolinha flutuante",Ui.YELLOW) {
+            !canOverlay -> action("Permitir bolinha flutuante",Ui.YELLOW,"settings") {
                 AlertDialog.Builder(this)
                     .setTitle("Bolinha do Primo")
                     .setMessage("Na próxima tela, permita ao Primo aparecer sobre outros aplicativos. Depois volte aqui e ative a bolinha.")
@@ -107,12 +137,12 @@ class MainActivity : Activity() {
                             Uri.parse("package:$packageName")))
                     }.setNegativeButton("Agora não",null).show()
             }
-            enabled -> action("Desligar bolinha flutuante",0xFF64748B.toInt()) {
+            enabled -> action("Desligar bolinha flutuante",0xFF64748B.toInt(),"settings") {
                 stopService(Intent(this, FloatingService::class.java))
                 getSharedPreferences("state",MODE_PRIVATE).edit().putBoolean("overlay_running",false).apply()
                 draw()
             }
-            else -> action("Ativar bolinha flutuante",Ui.YELLOW) {
+            else -> action("Ativar bolinha flutuante",Ui.YELLOW,"settings") {
                 if (Build.VERSION.SDK_INT >= 33 &&
                     checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),101)
@@ -127,6 +157,36 @@ class MainActivity : Activity() {
         content.addView(Ui.gap(this,18))
         add("Resumo financeiro",22f,true)
         content.addView(Ui.gap(this,10))
+        showPeriodSelector()
+        val (start, end, periodName) = range()
+        val entries = db.between(start,end)
+        val income = entries.filter { it.kind == EntryTypes.RIDE }.sumOf { it.cents }
+        val expenses = entries.filter { it.kind != EntryTypes.RIDE }.sumOf { it.cents }
+        val rides = entries.count { it.kind == EntryTypes.RIDE }
+        content.addView(Ui.gap(this,15))
+        card("RECEBIDO — $periodName",Money.show(income),"$rides corridas",Ui.GREEN)
+        content.addView(Ui.gap(this,7))
+        val amounts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        amounts.addView(smallCard("GASTOS",Money.show(expenses),Ui.RED),LinearLayout.LayoutParams(0,-2,1f).apply {
+            rightMargin = Ui.dp(this@MainActivity,5)
+        })
+        amounts.addView(smallCard("SALDO PARCIAL",Money.show(income-expenses),Ui.BLUE),
+            LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin = Ui.dp(this@MainActivity,5) })
+        content.addView(amounts)
+        content.addView(Ui.gap(this,4))
+        add("Saldo = receitas menos despesas lançadas.",12f)
+        content.addView(Ui.gap(this,16))
+        add("Registrar agora",20f,true)
+        action("Corrida",Ui.BLUE,"ride") { showEntryForm(EntryTypes.RIDE) }
+        action("Gasolina",Ui.YELLOW,"fuel") { showEntryForm(EntryTypes.FUEL) }
+        action("Mecânico",Ui.DARK,"repair") { showEntryForm(EntryTypes.REPAIR) }
+        showCompactGoal()
+        content.addView(Ui.gap(this,18))
+        content.addView(Ui.text(this,"Histórico e metas estão no menu inferior.",14f))
+        content.addView(Ui.gap(this,25))
+    }
+
+    private fun showPeriodSelector() {
         val periodRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         listOf("Hoje","Ontem","Semana","Mês","Dia...").forEachIndexed { i, title ->
             val choose = TextView(this).apply {
@@ -147,45 +207,106 @@ class MainActivity : Activity() {
             })
         }
         content.addView(periodRow)
-        val (start, end, periodName) = range()
+    }
+
+    private fun drawHistoryPage() {
+        add("Histórico",28f,true)
+        content.addView(Ui.gap(this,8))
+        add("Consulte e corrija seus lançamentos.",14f)
+        content.addView(Ui.gap(this,14))
+        showPeriodSelector()
+        val (start,end,_) = range()
         val entries = db.between(start,end)
-        val income = entries.filter { it.kind == EntryTypes.RIDE }.sumOf { it.cents }
-        val expenses = entries.filter { it.kind != EntryTypes.RIDE }.sumOf { it.cents }
-        val rides = entries.count { it.kind == EntryTypes.RIDE }
         content.addView(Ui.gap(this,15))
-        card("RECEBIDO — $periodName",Money.show(income),"$rides corridas",Ui.GREEN)
-        content.addView(Ui.gap(this,7))
-        val amounts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        amounts.addView(smallCard("GASTOS",Money.show(expenses),Ui.RED),LinearLayout.LayoutParams(0,-2,1f).apply {
-            rightMargin = Ui.dp(this@MainActivity,5)
-        })
-        amounts.addView(smallCard("SALDO PARCIAL",Money.show(income-expenses),Ui.BLUE),
-            LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin = Ui.dp(this@MainActivity,5) })
-        content.addView(amounts)
-        content.addView(Ui.gap(this,4))
-        add("Saldo = receitas menos despesas lançadas.",12f)
-        showGoalCards()
-        content.addView(Ui.gap(this,16))
-        add("Registrar agora",20f,true)
-        action("🚕  Corrida",Ui.BLUE) { showEntryForm(EntryTypes.RIDE) }
-        action("⛽  Gasolina",Ui.YELLOW) { showEntryForm(EntryTypes.FUEL) }
-        action("🔧  Mecânico",Ui.DARK) { showEntryForm(EntryTypes.REPAIR) }
-        content.addView(Ui.gap(this,18))
-        add("Histórico do período",20f,true)
-        content.addView(Ui.gap(this,7))
         if (entries.isEmpty()) {
-            add("Nada anotado por aqui ainda, primo.",15f)
-        } else {
-            entries.forEach { entry -> entryRow(entry) }
-        }
+            val empty = Ui.column(this,16).apply { background = Ui.rounded(Color.WHITE,this@MainActivity) }
+            empty.addView(Ui.text(this,"Ainda não há lançamentos neste período.",16f))
+            content.addView(empty)
+        } else entries.forEach { entryRow(it) }
+        content.addView(Ui.gap(this,20))
+    }
+
+    private fun drawGoalsPage() {
+        add("Minhas metas",28f,true)
+        content.addView(Ui.gap(this,5))
+        add("Acompanhe seu objetivo diário e semanal.",14f)
+        showGoalCards()
+        content.addView(Ui.gap(this,20))
+    }
+
+    private fun drawMorePage() {
+        add("Mais opções",28f,true)
+        content.addView(Ui.gap(this,6))
+        add("Configurações e segurança dos seus dados.",14f)
+        content.addView(Ui.gap(this,17))
+        action("Configurar metas e mensagens",Ui.BLUE,"settings") { showGoalsDialog() }
+        action("Exportar backup",0xFF475569.toInt(),"backup") { exportBackup() }
+        action("Importar backup",0xFF475569.toInt(),"restore") { importBackup() }
         content.addView(Ui.gap(this,18))
-        add("Mais opções",20f,true)
-        action("Configurar metas e mensagens",Ui.BLUE) { showGoalsDialog() }
-        action("Exportar backup",0xFF475569.toInt()) { exportBackup() }
-        action("Importar backup",0xFF475569.toInt()) { importBackup() }
-        content.addView(Ui.gap(this,10))
-        add("Funciona sem internet. Exporte um backup regularmente.",13f)
-        content.addView(Ui.gap(this,25))
+        add("Seus registros ficam no aparelho e funcionam sem internet. Exporte um backup regularmente.",14f)
+    }
+
+    /** This compact card never shows earnings above the target: the detail remains in Metas. */
+    private fun showCompactGoal() {
+        val settings = goals.read()
+        val today = LocalDate.now()
+        val isDaily = settings.dailyEnabled && settings.dailyCents > 0
+        val isWeekly = !isDaily && settings.weeklyEnabled && settings.weeklyCents > 0
+        if (!isDaily && !isWeekly) return
+        val goalStart = if (isDaily) today else GoalMath.startOfWeek(today)
+        val goalEnd = if (isDaily) today.plusDays(1) else goalStart.plusDays(7)
+        val target = if (isDaily) settings.dailyCents else settings.weeklyCents
+        val remaining = GoalMath.remaining(GoalMath.received(db,goalStart,goalEnd),target)
+        val block = Ui.column(this,13).apply {
+            background = Ui.rounded(Color.WHITE,this@MainActivity,16)
+            setOnClickListener { tab = 2; draw(); scroller.scrollTo(0,0) }
+        }
+        content.addView(Ui.gap(this,11))
+        val title = if (isDaily) "Meta do dia" else "Meta da semana"
+        val label = Ui.text(this,"$title: ${Money.show(target)}",15f,true)
+        block.addView(label)
+        val message = if (remaining == 0L) "✓ Meta concluída" else "Faltam ${Money.show(remaining)}"
+        block.addView(Ui.text(this,message,17f,true).apply {
+            setTextColor(if (remaining==0L) Ui.GREEN else Ui.BLUE)
+        })
+        content.addView(block)
+    }
+
+    private fun drawNavigation() {
+        navigation.removeAllViews()
+        val items = listOf(Triple("Início","home",0),Triple("Histórico","history",1),
+            Triple("Metas","target",2),Triple("Mais","more",3))
+        items.forEach { (label,icon,index) ->
+            val chosen = tab == index
+            val item = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                background = Ui.rounded(if (chosen) 0xFFFFF4C1.toInt() else Color.WHITE,
+                    this@MainActivity,13)
+                contentDescription = label
+                isFocusable = true
+                setOnClickListener {
+                    if (tab != index) {
+                        tab = index
+                        draw()
+                        scroller.scrollTo(0,0)
+                        content.alpha = 0.5f
+                        content.animate().alpha(1f).setDuration(175L).start()
+                    }
+                }
+            }
+            val tint = if (chosen) Ui.BLUE else 0xFF64748B.toInt()
+            item.addView(ImageView(this).apply {
+                setImageDrawable(primoIcon(this@MainActivity,icon,tint,23))
+                contentDescription = null
+            },LinearLayout.LayoutParams(Ui.dp(this,23),Ui.dp(this,23)))
+            item.addView(Ui.text(this,label,12f,chosen).apply {
+                setTextColor(tint); gravity = Gravity.CENTER
+            })
+            navigation.addView(item,LinearLayout.LayoutParams(0,-1,1f).apply {
+                setMargins(Ui.dp(this@MainActivity,2),0,Ui.dp(this@MainActivity,2),0)
+            })
+        }
     }
 
     private fun smallCard(label: String, amount: String, color: Int): LinearLayout =
@@ -200,7 +321,7 @@ class MainActivity : Activity() {
         val settings = goals.read()
         content.addView(Ui.gap(this,16))
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        row.addView(Ui.text(this,"🎯 Minhas metas",20f,true),
+        row.addView(Ui.text(this,"Acompanhar metas",20f,true),
             LinearLayout.LayoutParams(0,-2,1f))
         row.addView(Ui.button(this,"Editar",Ui.BLUE).apply {
             textSize = 13f
@@ -233,7 +354,17 @@ class MainActivity : Activity() {
         block.addView(Ui.gap(this,8))
         block.addView(ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progress = GoalMath.progress(received,target)
+            val goalPercent = GoalMath.progress(received,target)
+            progress = goalPercent
+            if (goalPercent > 0) {
+                val bar = this
+                bar.post {
+                    ObjectAnimator.ofInt(bar,"progress",0,goalPercent).apply {
+                        duration = 380L
+                        interpolator = DecelerateInterpolator()
+                    }.start()
+                }
+            }
             progressTintList = ColorStateList.valueOf(Ui.GREEN)
             progressBackgroundTintList = ColorStateList.valueOf(0xFFE2E8F0.toInt())
             minimumHeight = Ui.dp(this@MainActivity,9)
@@ -316,7 +447,22 @@ class MainActivity : Activity() {
     private fun entryRow(e: Entry) {
         val card = Ui.column(this,12).apply { background = Ui.rounded(Color.WHITE,this@MainActivity) }
         val label = EntryTypes.name(e.kind) + if (e.kind == EntryTypes.RIDE) " • ${e.source} • ${e.payment}" else ""
-        card.addView(Ui.text(this,label,16f,true))
+        val kindIcon = when (e.kind) {
+            EntryTypes.RIDE -> "ride"
+            EntryTypes.FUEL -> "fuel"
+            else -> "repair"
+        }
+        card.addView(LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.HORIZONTAL
+            addView(ImageView(this@MainActivity).apply {
+                setImageDrawable(primoIcon(this@MainActivity,kindIcon,Ui.BLUE,21))
+                contentDescription = null
+            },LinearLayout.LayoutParams(Ui.dp(this@MainActivity,21),Ui.dp(this@MainActivity,21)).apply {
+                rightMargin = Ui.dp(this@MainActivity,10)
+            })
+            addView(Ui.text(this@MainActivity,label,16f,true))
+        })
         val timestamp = SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("pt","BR")).format(Date(e.createdAt))
         card.addView(Ui.text(this,timestamp,13f))
         card.addView(Ui.text(this,(if (e.kind == EntryTypes.RIDE) "+ " else "− ") + Money.show(e.cents),20f,true)

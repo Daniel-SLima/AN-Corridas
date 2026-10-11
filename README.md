@@ -74,3 +74,25 @@ Sem rastreadores, anúncios ou servidor. Os dados ficam no aparelho, sem interne
 5. Reiniciar o aplicativo e verificar se os dados persistiram.
 6. Exportar backup, validar em instalação de teste sem apagar dados reais.
 7. Testar como o sistema lida com tela bloqueada, pouca bateria e fim do serviço.
+
+## Primo 0.4.0 — melhorias de usabilidade
+
+- Navegação inferior fixa entre **Início**, **Histórico**, **Metas** e **Mais**; o registro rápido continua disponível na tela inicial.
+- Ícones vetoriais uniformes para corrida, combustível, manutenção, menus e lançamentos, sem fonte externa nem Internet.
+- Animação curta ao mudar de área, ao expandir/recolher o menu flutuante, ao arrastar a bolinha e na barra das metas.
+- O menu da bolinha passa a usar a **altura medida** para se manter visível e segue o arraste, escolhendo automaticamente a área disponível à esquerda, à direita, acima ou abaixo.
+- A bolinha se acomoda perto da borda após arrastar. O gesto de arrastar **não desativa nem oculta** o serviço.
+- Metas ativas aparecem em formato compacto **abaixo de Mecânico** na tela principal e no menu da bolinha; prioridade para meta diária, com semanal como alternativa. Exibe apenas o valor que falta, ou **Meta concluída** após atingir o objetivo. Valores superiores à meta ficam nas telas de relatórios/metas.
+- Mantidas a assinatura permanente do release, o mesmo identificador do aplicativo, os dados locais SQLite e o formato dos backups, com `versionCode` incremental para atualizar por cima da instalação 0.3.1.
+
+### Checklist manual de QA para 0.4.0
+
+1. Instalar **sem desinstalar** a 0.3.1 e confirmar que o histórico e as metas são preservados.
+2. Arrastar a bolinha para quatro cantos com o menu aberto: as três ações e a meta devem ficar acessíveis e acompanhar o movimento.
+3. Conferir o funcionamento da bolinha sobre a 99, sem sobrepor controles críticos, sempre com o carro parado.
+4. Salvar corrida, gasolina e mecânico; conferir confirmação verde e fechamento do painel.
+5. Comparar a meta compacta antes, no momento e após atingir o valor diário; testar também somente a semanal e nenhuma meta.
+6. Verificar a navegação fixa, consulta a outros dias, edição e exclusão no histórico, backup e restauração.
+7. Fechar, reabrir e reiniciar o aparelho; conferir dados preservados e que a bolinha não ativa sozinha se estiver desativada.
+
+A compilação automática é um teste técnico do código. A compatibilidade específica com o Redmi 13C/MIUI/HyperOS precisa de validação no próprio aparelho.

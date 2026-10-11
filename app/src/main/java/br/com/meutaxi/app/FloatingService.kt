@@ -1,5 +1,7 @@
 package br.com.meutaxi.app
 
+import android.animation.ValueAnimator
+import android.view.animation.DecelerateInterpolator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -23,6 +25,7 @@ import android.widget.TextView
 import android.widget.Toast
 import kotlin.math.abs
 import kotlin.math.min
+import java.time.LocalDate
 
 /** User-activated foreground service: a movable quick-entry overlay for other apps. */
 class FloatingService : Service() {
@@ -40,6 +43,7 @@ class FloatingService : Service() {
     private var menuParams: WindowManager.LayoutParams? = null
     private var confirming = false
     private var confirmationToken = 0
+    private var movement: ValueAnimator? = null
     private var form: View? = null
     private lateinit var db: EntriesDb
 
@@ -140,6 +144,7 @@ class FloatingService : Service() {
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
+                        movement?.cancel()
                         downX = event.rawX; downY = event.rawY
                         initialX = lp.x; initialY = lp.y
                         dragged = false
@@ -165,8 +170,7 @@ class FloatingService : Service() {
                     MotionEvent.ACTION_UP -> {
                         if (!dragged && !confirming) toggleMenu()
                         else if (dragged) {
-                            settings.edit().putInt("x",lp.x).putInt("y",lp.y).apply()
-                            updateMenuPosition()
+                            settleAtNearestEdge(button,lp,settings)
                         }
                         return true
                     }
@@ -178,23 +182,77 @@ class FloatingService : Service() {
         getSharedPreferences("state",MODE_PRIVATE).edit().putBoolean("overlay_running",true).apply()
     }
 
+    /** Predictable edge docking: drag never removes or hides the quick-entry button. */
+    private fun settleAtNearestEdge(view: View, lp: WindowManager.LayoutParams,
+                                    settings: android.content.SharedPreferences) {
+        val screen = resources.displayMetrics
+        val maxX = (screen.widthPixels - Ui.dp(this,58)).coerceAtLeast(0)
+        val target = if (lp.x < maxX / 2) Ui.dp(this,8).coerceAtMost(maxX)
+                     else (maxX - Ui.dp(this,8)).coerceAtLeast(0)
+        movement?.cancel()
+        movement = ValueAnimator.ofInt(lp.x,target).apply {
+            duration = 165L
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                lp.x = it.animatedValue as Int
+                safeUpdate(view,lp)
+                updateMenuPosition()
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    settings.edit().putInt("x",lp.x).putInt("y",lp.y).apply()
+                    updateMenuPosition()
+                }
+            })
+            start()
+        }
+    }
+
+    /** Display only the remaining goal amount, and stop counting once attained. */
+    private fun compactGoalView(): TextView? {
+        val settings = GoalsStore(this).read()
+        val today = LocalDate.now()
+        val daily = settings.dailyEnabled && settings.dailyCents > 0
+        val weekly = !daily && settings.weeklyEnabled && settings.weeklyCents > 0
+        if (!daily && !weekly) return null
+        val start = if (daily) today else GoalMath.startOfWeek(today)
+        val end = if (daily) today.plusDays(1) else start.plusDays(7)
+        val target = if (daily) settings.dailyCents else settings.weeklyCents
+        val left = GoalMath.remaining(GoalMath.received(db,start,end),target)
+        val finished = left == 0L
+        return Ui.text(this,if (finished) "✓ Meta concluída" else
+            "${if (daily) "Meta diária" else "Meta semanal"}: faltam ${Money.show(left)}",13f,true).apply {
+            setTextColor(if (finished) Ui.GREEN else Ui.BLUE)
+            gravity = Gravity.CENTER
+            background = Ui.rounded(if (finished) 0xFFE8F8EE.toInt() else 0xFFF0F5FA.toInt(),
+                this@FloatingService,12)
+            setPadding(Ui.dp(this@FloatingService,7),Ui.dp(this@FloatingService,11),
+                Ui.dp(this@FloatingService,7),Ui.dp(this@FloatingService,11))
+            contentDescription = text
+        }
+    }
+
     private fun toggleMenu() {
-        if (menu != null) { closeMenu(); return }
+        if (menu != null) { closeMenu(animated = true); return }
         closeForm()
         val panel = Ui.column(this,10).apply {
             background = Ui.rounded(Color.WHITE,this@FloatingService)
             elevation = Ui.dp(this@FloatingService,8).toFloat()
         }
         listOf(
-            Triple("🚕 Corrida",EntryTypes.RIDE,Ui.BLUE),
-            Triple("⛽ Gasolina",EntryTypes.FUEL,Ui.YELLOW),
-            Triple("🔧 Mecânico",EntryTypes.REPAIR,Ui.DARK)
+            Triple("Corrida",EntryTypes.RIDE,Ui.BLUE),
+            Triple("Gasolina",EntryTypes.FUEL,Ui.YELLOW),
+            Triple("Mecânico",EntryTypes.REPAIR,Ui.DARK)
         ).forEach { (label,kind,color) ->
-            panel.addView(Ui.button(this,label,color).apply {
-                setOnClickListener { closeMenu(); openForm(kind) }
+            panel.addView(Ui.iconButton(this,label,kindToIcon(kind),color).apply {
+                setOnClickListener { Ui.tapFeedback(this); closeMenu(); openForm(kind) }
             },LinearLayout.LayoutParams(-1,Ui.dp(this,52)).apply {
                 bottomMargin = Ui.dp(this@FloatingService,5)
             })
+        }
+        compactGoalView()?.let { goal ->
+            panel.addView(Ui.gap(this,6))
+            panel.addView(goal,LinearLayout.LayoutParams(-1,WindowManager.LayoutParams.WRAP_CONTENT))
         }
         val boxWidth = Ui.dp(this,205)
         val lp = params(boxWidth, WindowManager.LayoutParams.WRAP_CONTENT,
@@ -209,11 +267,19 @@ class FloatingService : Service() {
             panel.alpha = 0f
             panel.scaleX = 0.95f
             panel.scaleY = 0.95f
-            panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(150L).start()
+            panel.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                .setInterpolator(DecelerateInterpolator()).setDuration(185L).start()
+            panel.post { if (menu === panel) updateMenuPosition() }
         } catch (_: Exception) {
             menu = null
             menuParams = null
         }
+    }
+
+    private fun kindToIcon(kind: String) = when (kind) {
+        EntryTypes.RIDE -> "ride"
+        EntryTypes.FUEL -> "fuel"
+        else -> "repair"
     }
 
     /** Keep the expanded actions attached to the moving bubble and on-screen. */
@@ -224,21 +290,26 @@ class FloatingService : Service() {
         val display = resources.displayMetrics
         val diameter = Ui.dp(this,58)
         val panelWidth = Ui.dp(this,205)
-        val panelHeight = Ui.dp(this,212)
+        // Use the real rendered menu height (optional goal label makes it taller).
+        val panelHeight = panel.height.takeIf { it > 0 } ?: Ui.dp(this,280)
         val gap = Ui.dp(this,10)
-        val safeTop = Ui.dp(this,24)
-        val safeBottom = Ui.dp(this,72)
-        lp.x = (if (anchor.x + diameter / 2 >= display.widthPixels / 2) {
-            anchor.x + diameter - panelWidth
-        } else {
-            anchor.x
-        }).coerceIn(0,(display.widthPixels-panelWidth).coerceAtLeast(0))
-        val above = anchor.y - panelHeight - gap
+        val safeTop = Ui.dp(this,26)
+        val safeBottom = Ui.dp(this,76)
+        val roomLeft = anchor.x - gap
+        val roomRight = display.widthPixels - anchor.x - diameter - gap
+        val hasSide = roomRight >= panelWidth || roomLeft >= panelWidth
+        lp.x = (if (roomRight >= panelWidth) anchor.x + diameter + gap
+            else if (roomLeft >= panelWidth) anchor.x - panelWidth - gap
+            else if (anchor.x + diameter / 2 >= display.widthPixels / 2)
+                anchor.x + diameter - panelWidth
+            else anchor.x).coerceIn(0,(display.widthPixels-panelWidth).coerceAtLeast(0))
         val below = anchor.y + diameter + gap
-        val bottomLimit = (display.heightPixels - panelHeight - safeBottom)
-            .coerceAtLeast(safeTop)
-        lp.y = (if (above >= safeTop) above else below)
-            .coerceIn(safeTop,bottomLimit)
+        val above = anchor.y - panelHeight - gap
+        val centered = anchor.y + diameter/2 - panelHeight/2
+        val maximumY = (display.heightPixels-panelHeight-safeBottom).coerceAtLeast(safeTop)
+        lp.y = (if (hasSide) centered
+            else if (above >= safeTop) above
+            else below).coerceIn(safeTop,maximumY)
         safeUpdate(panel,lp)
     }
 
@@ -307,16 +378,24 @@ class FloatingService : Service() {
     private fun safeUpdate(view: View, lp: WindowManager.LayoutParams) {
         try { manager.updateViewLayout(view,lp) } catch (_: Exception) { }
     }
-    private fun closeMenu() {
-        menu?.let { it.animate().cancel(); safelyRemove(it) }
+    private fun closeMenu(animated: Boolean = false) {
+        val closing = menu
         menu = null
         menuParams = null
+        closing?.let { view ->
+            view.animate().cancel()
+            if (animated) {
+                view.animate().alpha(0f).scaleX(0.95f).scaleY(0.95f)
+                    .setDuration(115L).withEndAction { safelyRemove(view) }.start()
+            } else safelyRemove(view)
+        }
     }
     private fun closeForm() { form?.let { safelyRemove(it) }; form = null }
     private fun safelyRemove(view: View) { try { manager.removeView(view) } catch (_: Exception) {} }
 
     override fun onDestroy() {
         confirmationToken += 1
+        movement?.cancel()
         closeMenu(); closeForm()
         bubble?.let { it.animate().cancel(); safelyRemove(it) }; bubble = null
         bubbleLabel = null
