@@ -23,56 +23,100 @@ data class ClosingTotals(
     val averageRide: Long get() = if (rides == 0) 0L else received / rides
 }
 
-/** Read-only financial summaries: recorded revenue, not net profit. */
 object ClosingReport {
-    private fun summarize(rides: List<Entry>, key: (Entry) -> String, preferred: List<String>): List<ReportItem> {
-        val groups = rides.groupBy { key(it).trim().ifBlank { "Não informado" } }
-        val labels = preferred.filter { groups.containsKey(it) } +
+    private val dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt","BR"))
+    private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale("pt","BR"))
+    private val filenameDate = DateTimeFormatter.ISO_LOCAL_DATE
+
+    private fun summarize(rides: List<Entry>, key: (Entry)->String, preferred:List<String>):List<ReportItem> {
+        val groups=rides.groupBy { key(it).trim().ifBlank { "Não informado" } }
+        val names=preferred.filter { groups.containsKey(it) } +
             groups.keys.filterNot { it in preferred }.sorted()
-        return labels.map { label ->
-            val entries = groups[label].orEmpty()
-            ReportItem(label, entries.sumOf { it.cents }, entries.size)
+        return names.map { label ->
+            val matches=groups[label].orEmpty()
+            ReportItem(label,matches.sumOf { it.cents },matches.size)
         }
     }
 
-    fun calculate(entries: List<Entry>): ClosingTotals {
-        val rides = entries.filter { it.kind == EntryTypes.RIDE }
-        val fuel = entries.filter { it.kind == EntryTypes.FUEL }
-        val repair = entries.filter { it.kind == EntryTypes.REPAIR }
+    fun calculate(entries:List<Entry>):ClosingTotals {
+        val rides=entries.filter { it.kind==EntryTypes.RIDE }
+        val fuel=entries.filter { it.kind==EntryTypes.FUEL }
+        val repair=entries.filter { it.kind==EntryTypes.REPAIR }
         return ClosingTotals(
-            rides.size, rides.sumOf { it.cents },
-            fuel.sumOf { it.cents }, fuel.size,
-            repair.sumOf { it.cents }, repair.size,
-            summarize(rides, { it.source }, listOf("Rua","99","Uber Taxi")),
-            summarize(rides, { it.payment }, listOf("Dinheiro","Pix","Cartão","App"))
+            rides.size,rides.sumOf { it.cents },
+            fuel.sumOf { it.cents },fuel.size,
+            repair.sumOf { it.cents },repair.size,
+            summarize(rides,{it.source},listOf("Rua","99","Uber Taxi")),
+            summarize(rides,{it.payment},listOf("Dinheiro","Pix","Cartão","App"))
         )
     }
 
-    /** Escape spreadsheet formula injection from driver-provided text. */
-    private fun csvText(value: String): String {
-        val normalized = value.replace('\r',' ').replace('\n',' ').replace('\t',' ')
-        val dangerous = normalized.trimStart().firstOrNull() in listOf('=','+','-','@')
-        val escaped = (if (dangerous) "'" else "") + normalized
-        return "\"" + escaped.replace("\"","\"\"") + "\""
+    /** ISO range is based on local dates and an exclusive end timestamp. */
+    fun fileName(startInclusive:Long,endExclusive:Long):String {
+        require(startInclusive < endExclusive)
+        val first=Instant.ofEpochMilli(startInclusive).atZone(ZoneId.systemDefault()).toLocalDate()
+        val last=Instant.ofEpochMilli(endExclusive-1).atZone(ZoneId.systemDefault()).toLocalDate()
+        return "primo-fechamento-${first.format(filenameDate)}_a_${last.format(filenameDate)}.csv"
     }
 
-    fun csv(entries: List<Entry>): String {
-        val date = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt","BR"))
-        val hour = DateTimeFormatter.ofPattern("HH:mm", Locale("pt","BR"))
-        val result = StringBuilder("Data;Hora;Categoria;Origem;Pagamento;Descrição;Valor (R$)\r\n")
-        entries.sortedWith(compareBy<Entry> { it.createdAt }.thenBy { it.id }).forEach { entry ->
-            val time = Instant.ofEpochMilli(entry.createdAt).atZone(ZoneId.systemDefault())
-            val signed = if (entry.kind == EntryTypes.RIDE) entry.cents else -entry.cents
-            // This number is app-generated and cannot contain a formula.
-            val money = BigDecimal.valueOf(signed,2).toPlainString().replace('.',',')
-            result.append(listOf(
-                csvText(time.format(date)), csvText(time.format(hour)),
-                csvText(EntryTypes.name(entry.kind)),
-                csvText(if (entry.kind == EntryTypes.RIDE) entry.source else ""),
-                csvText(if (entry.kind == EntryTypes.RIDE) entry.payment else ""),
-                csvText(entry.note), money
-            ).joinToString(";"))
-            result.append("\r\n")
+    /** User-supplied text is escaped and cannot become a spreadsheet formula. */
+    private fun escape(value:String):String {
+        val normalized=value.replace('\r',' ').replace('\n',' ').replace('\t',' ')
+        val first=normalized.trimStart().firstOrNull()
+        val safe=if(first=='=' || first=='+' || first=='-' || first=='@') "'"+normalized else normalized
+        return "\""+safe.replace("\"","\"\"")+"\""
+    }
+
+    private fun money(value:Long):String =
+        BigDecimal.valueOf(value,2).toPlainString().replace('.',',')
+
+    fun csv(entries:List<Entry>):String = csv(entries,null,null,"Período selecionado")
+
+    /** Stable 8-column layout, three explicit categories and summary with daily dates. */
+    fun csv(entries:List<Entry>,startInclusive:Long?,endExclusive:Long?,periodTitle:String):String {
+        val report=calculate(entries)
+        val result=StringBuilder()
+        fun line(vararg fields:String) { result.append(fields.joinToString(";")).append("\r\n") }
+        val startText=startInclusive?.let {
+            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate().format(dateFormat)
+        } ?: ""
+        val endText=endExclusive?.let {
+            Instant.ofEpochMilli(it-1).atZone(ZoneId.systemDefault()).toLocalDate().format(dateFormat)
+        } ?: ""
+        line("Fechamento Primo",escape(periodTitle),"Início",escape(startText),"Fim",escape(endText),"","")
+        line("Data","Hora","Categoria","Origem","Pagamento","Descrição","Ganhos (R$)","Gastos (R$)")
+        line(escape("RESUMO"),"","","","","","","")
+        line(escape("Corridas"),"","","",escape("${report.rides} corridas"),"",money(report.received),"")
+        line(escape("Gasolina"),"","","",escape("${report.fuelCount} registros"),"","",money(report.fuel))
+        line(escape("Mecânico"),"","","",escape("${report.repairCount} registros"),"","",money(report.repair))
+        line(escape("TOTAL"),"","","","","",money(report.received),money(report.expenses))
+        line(escape("SALDO PARCIAL"),"","","","","",money(report.balance),"")
+        line("","","","","","","","")
+
+        val sections=listOf(
+            EntryTypes.RIDE to "CORRIDAS",
+            EntryTypes.FUEL to "GASOLINA",
+            EntryTypes.REPAIR to "MECÂNICO"
+        )
+        for((kind,label) in sections) {
+            val group=entries.asSequence().filter { it.kind==kind }
+                .sortedWith(compareBy<Entry>{it.createdAt}.thenBy { it.id }).toList()
+            line(escape("SEÇÃO: "+label),"","","","","","","")
+            group.forEach { entry ->
+                val time=Instant.ofEpochMilli(entry.createdAt).atZone(ZoneId.systemDefault())
+                val ride=entry.kind==EntryTypes.RIDE
+                line(
+                    escape(time.format(dateFormat)),escape(time.format(timeFormat)),
+                    escape(EntryTypes.name(entry.kind)),
+                    escape(if(ride)entry.source else ""),
+                    escape(if(ride)entry.payment else ""),
+                    escape(entry.note),
+                    if(ride)money(entry.cents) else "",
+                    if(!ride)money(entry.cents) else ""
+                )
+            }
+            if(group.isEmpty()) line(escape("Nenhum lançamento"),"","","","","","","")
+            line("","","","","","","","")
         }
         return result.toString()
     }

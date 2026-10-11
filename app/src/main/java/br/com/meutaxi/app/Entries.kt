@@ -120,6 +120,24 @@ class EntriesDb(context: Context) : SQLiteOpenHelper(context, "meutaxi.db", null
         return result
     }
 
+    /** Latest insertion, not latest edited item; suitable for a deliberate undo. */
+    fun latest(): Entry? {
+        val rows=mutableListOf<Entry>()
+        readableDatabase.query("entries",null,null,null,null,null,
+            "id DESC","1").use { cursor ->
+            if (cursor.moveToFirst()) rows.add(Entry(
+                id=cursor.getLong(cursor.getColumnIndexOrThrow("id")),
+                kind=cursor.getString(cursor.getColumnIndexOrThrow("kind")),
+                cents=cursor.getLong(cursor.getColumnIndexOrThrow("cents")),
+                createdAt=cursor.getLong(cursor.getColumnIndexOrThrow("created_at")),
+                source=cursor.getString(cursor.getColumnIndexOrThrow("source")),
+                payment=cursor.getString(cursor.getColumnIndexOrThrow("payment")),
+                note=cursor.getString(cursor.getColumnIndexOrThrow("note"))
+            ))
+        }
+        return rows.firstOrNull()
+    }
+
     fun all(): List<Entry> = between(0L, Long.MAX_VALUE)
 
     fun backupJson(): String {

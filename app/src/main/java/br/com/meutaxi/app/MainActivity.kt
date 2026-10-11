@@ -142,11 +142,20 @@ class MainActivity : Activity() {
     private fun add(text: String, size: Float = 16f, bold: Boolean = false): TextView =
         Ui.text(this,text,size,bold).also { content.addView(it) }
 
+    private fun simpleMode(): Boolean =
+        getSharedPreferences("primo_display",MODE_PRIVATE).getBoolean("simple_mode",true)
+
     private fun action(label: String, color: Int = Ui.BLUE, icon: String? = null, task: () -> Unit) {
         content.addView(Ui.gap(this,7))
         val button = if (icon == null) Ui.button(this,label,color)
                      else Ui.iconButton(this,label,icon,color)
         content.addView(button.apply {
+            if (tab == 0 && simpleMode() && label in setOf("Corrida","Gasolina","Mecânico")) {
+                textSize = 21f
+                minHeight = Ui.dp(this@MainActivity,69)
+                setPadding(Ui.dp(this@MainActivity,20),Ui.dp(this@MainActivity,10),
+                    Ui.dp(this@MainActivity,20),Ui.dp(this@MainActivity,10))
+            }
             setOnClickListener { Ui.tapFeedback(this); task() }
         })
     }
@@ -185,9 +194,11 @@ class MainActivity : Activity() {
         },LinearLayout.LayoutParams(Ui.dp(this,76),Ui.dp(this,76)))
         content.addView(header)
         content.addView(Ui.gap(this,10))
-        val greeting = Ui.text(this,"Bom dia, primo! Bora organizar as contas?",15f)
-        content.addView(greeting)
-        content.addView(Ui.gap(this,9))
+        if (!simpleMode()) {
+            val greeting = Ui.text(this,"Bom dia, primo! Bora organizar as contas?",15f)
+            content.addView(greeting)
+            content.addView(Ui.gap(this,9))
+        }
         val enabled = getSharedPreferences("state",MODE_PRIVATE).getBoolean("overlay_running",false)
         val canOverlay = Settings.canDrawOverlays(this)
         when {
@@ -244,8 +255,11 @@ class MainActivity : Activity() {
         action("Gasolina",Ui.YELLOW,"fuel") { showEntryForm(EntryTypes.FUEL) }
         action("Mecânico",Ui.DARK,"repair") { showEntryForm(EntryTypes.REPAIR) }
         showCompactGoal()
-        content.addView(Ui.gap(this,18))
-        content.addView(Ui.text(this,"Histórico e metas estão no menu inferior.",14f))
+        action("Resumo do dia",Ui.BLUE,"history") { showDailySummary() }
+        if (!simpleMode()) {
+            content.addView(Ui.gap(this,12))
+            content.addView(Ui.text(this,"Histórico e metas estão no menu inferior.",14f))
+        }
         content.addView(Ui.gap(this,25))
     }
 
@@ -347,6 +361,38 @@ class MainActivity : Activity() {
         }
         closingCard.addView(row)
         content.addView(closingCard)
+        content.addView(Ui.gap(this,15))
+        val displayCard = Ui.column(this,16).apply {
+            background=Ui.rounded(Color.WHITE,this@MainActivity,17)
+        }
+        val displayRow=LinearLayout(this).apply {
+            orientation=LinearLayout.HORIZONTAL
+            gravity=Gravity.CENTER_VERTICAL
+        }
+        val labelColumn=Ui.column(this,0).apply {
+            addView(Ui.text(this@MainActivity,"Modo simples",19f,true))
+            addView(Ui.text(this@MainActivity,
+                "Botões maiores e menos mensagens na tela inicial.",13f))
+        }
+        displayRow.addView(labelColumn,LinearLayout.LayoutParams(0,-2,1f).apply {
+            rightMargin=Ui.dp(this@MainActivity,12)
+        })
+        displayRow.addView(Switch(this).apply {
+            isChecked=simpleMode()
+            contentDescription="Ativar ou desativar modo simples"
+            setOnCheckedChangeListener { _,checked ->
+                getSharedPreferences("primo_display",MODE_PRIVATE).edit()
+                    .putBoolean("simple_mode",checked).apply()
+                Toast.makeText(this@MainActivity,
+                    if(checked)"Modo simples ativado" else "Modo simples desativado",
+                    Toast.LENGTH_SHORT).show()
+            }
+        })
+        displayCard.addView(displayRow)
+        content.addView(displayCard)
+        action("Desfazer último lançamento",0xFF64748B.toInt(),"history") {
+            confirmUndoLastEntry()
+        }
         content.addView(Ui.gap(this,13))
         val widgetCard = Ui.column(this,16).apply {
             background = Ui.rounded(Color.WHITE,this@MainActivity,18)
@@ -480,9 +526,8 @@ class MainActivity : Activity() {
         content.addView(section)
     }
 
-    /** Fixed CSV format for Android spreadsheet apps validated with the user. */
-    private fun csvBytes(items:List<Entry>):ByteArray =
-        ClosingReport.csv(items).toByteArray(Charset.forName("windows-1252"))
+    private fun csvBytes(items:List<Entry>,start:Long,end:Long,title:String):ByteArray =
+        ClosingReport.csv(items,start,end,title).toByteArray(Charset.forName("windows-1252"))
 
     private fun downloadClosingCsv() {
         val (start,end,title)=range()
@@ -491,14 +536,7 @@ class MainActivity : Activity() {
             return
         }
         exportSelection=ExportSelection(start,end,title)
-        val fileTag=when(period) {
-            0 -> "hoje"
-            1 -> "ontem"
-            2 -> "semana"
-            3 -> "mes"
-            else -> selectedDate.toString()
-        }
-        val filename="primo-fechamento-"+fileTag+"-"+LocalDate.now()+".csv"
+        val filename=ClosingReport.fileName(start,end)
         val picker=Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type="text/csv"
@@ -508,7 +546,7 @@ class MainActivity : Activity() {
     }
 
     private fun shareClosingCsv() {
-        val (start,end,_)=range()
+        val (start,end,title)=range()
         val items=db.between(start,end)
         if(items.isEmpty()) {
             Toast.makeText(this,"Sem registros neste período.",Toast.LENGTH_SHORT).show()
@@ -517,13 +555,14 @@ class MainActivity : Activity() {
         try {
             val directory=File(cacheDir,"primo_shared")
             if(!directory.exists() && !directory.mkdirs())error("Não foi possível preparar o arquivo")
-            File(directory,"fechamento.csv").writeBytes(csvBytes(items))
-            val uri=Uri.parse("content://"+packageName+".exports/fechamento.csv")
+            val filename=ClosingReport.fileName(start,end)
+            File(directory,filename).writeBytes(csvBytes(items,start,end,title))
+            val uri=Uri.parse("content://"+packageName+".exports/"+filename)
             val send=Intent(Intent.ACTION_SEND).apply {
                 type="text/csv"
                 putExtra(Intent.EXTRA_STREAM,uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                clipData=ClipData.newUri(contentResolver,"Fechamento do Primo",uri)
+                clipData=ClipData.newUri(contentResolver,filename,uri)
             }
             startActivity(Intent.createChooser(send,"Compartilhar fechamento"))
         } catch(ex:Exception) {
@@ -531,6 +570,44 @@ class MainActivity : Activity() {
                 .setMessage(ex.message ?: "Tente novamente")
                 .setPositiveButton("OK",null).show()
         }
+    }
+
+    /** Read-only summary, never clears a driver's financial history. */
+    private fun showDailySummary() {
+        val date=LocalDate.now()
+        val day=ClosingReport.calculate(db.between(date.atStartMillis(),date.plusDays(1).atStartMillis()))
+        val text="Dia: "+date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))+
+            "\nCorridas: "+day.rides+
+            "\nRecebido: "+Money.show(day.received)+
+            "\nGasolina: "+Money.show(day.fuel)+
+            "\nMecânico: "+Money.show(day.repair)+
+            "\nGastos totais: "+Money.show(day.expenses)+
+            "\nSaldo parcial: "+Money.show(day.balance)+
+            "\n\nEste saldo não inclui despesas não registradas."
+        AlertDialog.Builder(this).setTitle("Resumo do dia")
+            .setMessage(text).setPositiveButton("Fechar",null).show()
+    }
+
+    /** Require confirmation to prevent accidental loss of the newest entry. */
+    private fun confirmUndoLastEntry() {
+        val last=db.latest()
+        if(last==null) {
+            Toast.makeText(this,"Ainda não há lançamentos.",Toast.LENGTH_SHORT).show()
+            return
+        }
+        val moment=java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("pt","BR"))
+            .format(java.util.Date(last.createdAt))
+        AlertDialog.Builder(this).setTitle("Desfazer último lançamento?")
+            .setMessage(EntryTypes.name(last.kind)+" de "+Money.show(last.cents)+
+                "\n"+moment+"\n\nEsse lançamento será excluído. Confirme somente se foi registrado por engano.")
+            .setNegativeButton("Cancelar",null)
+            .setNeutralButton("Editar") { _,_ -> showEntryForm(last.kind,last) }
+            .setPositiveButton("Excluir registro") { _,_ ->
+                if(db.delete(last.id)) {
+                    draw()
+                    Toast.makeText(this,"Registro excluído.",Toast.LENGTH_SHORT).show()
+                } else Toast.makeText(this,"Registro não encontrado.",Toast.LENGTH_SHORT).show()
+            }.show()
     }
 
     /** This compact card never shows earnings above the target: the detail remains in Metas. */
@@ -866,7 +943,7 @@ class MainActivity : Activity() {
                     val choice=exportSelection ?: error("Volte ao fechamento e exporte novamente")
                     val entries=db.between(choice.start,choice.end)
                     contentResolver.openOutputStream(uri)?.use {
-                        it.write(csvBytes(entries))
+                        it.write(csvBytes(entries,choice.start,choice.end,choice.title))
                         it.flush()
                     } ?: error("Não foi possível escrever o arquivo")
                     exportSelection=null

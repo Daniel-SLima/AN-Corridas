@@ -142,3 +142,24 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 - Formato único de saída: CSV compatível Windows-1252. Exportação Excel foi retirada do aplicativo. Nome do arquivo identifica o período.
 - Ícones vetoriais e áreas de toque grandes preservam a legibilidade.
 - Banco de dados, backup e certificado permanente mantidos; versão interna 8, maior do que os builds anteriores.
+
+## Primo 0.7.0 — CSV com período e modo simples
+
+- Nome de arquivo em downloads e compartilhamento: `primo-fechamento-AAAA-MM-DD_a_AAAA-MM-DD.csv`. O conteúdo identifica o início e o fim do período.
+- CSV único Windows-1252, com cabeçalho **Data, Hora, Categoria, Origem, Pagamento, Descrição, Ganhos (R$), Gastos (R$)**.
+- Seções consecutivas: **Corridas**, **Gasolina** e **Mecânico**. Resumo inicial com corridas, combustíveis, manutenções e saldo parcial. Despesas usam sua própria coluna, sem confundir receitas e gastos.
+- **Modo simples** (ativo inicialmente): botões grandes de Corrida, Gasolina e Mecânico na tela inicial, com menos texto. Pode ser desativado em Mais.
+- **Resumo do dia** na tela inicial: apresenta ganhos, despesas, número de corridas e saldo parcial, sem finalizar nem apagar nada.
+- **Desfazer último lançamento** em Mais: mostra o registro de inserção mais recente, exige confirmação para excluir ou permite editar.
+- Compartilhamento usa URI temporária limitada a arquivos CSV com nome de período, sem expor o banco.
+- Banco SQLite e assinatura permanente não foram alterados; versão interna aumentada para 9.
+
+### QA 0.7.0
+1. Atualizar por cima da 0.6.0 sem perder as 877 entradas da base fictícia ou registros reais.
+2. Exportar Hoje, Semana, Mês e Dia; conferir intervalo no nome **e** no CSV, tanto no download quanto no WhatsApp.
+3. Confirmar linhas diárias e seções Corridas, Gasolina e Mecânico, com ganhos e gastos em colunas distintas.
+4. Conferir Saldo parcial = recebido menos gastos, incluindo dias só com despesas.
+5. Ativar/desativar Modo simples; reiniciar e conferir preferência salva.
+6. Resumo do dia: verificar corridas/recebido/gastos; não deve apagar informações.
+7. Desfazer último: Cancelar, Editar e Excluir; exigir confirmação; verificar recálculo.
+8. Stress-test: histórico extenso, mudança de dia, salvar na bolinha e backup/restauração.
