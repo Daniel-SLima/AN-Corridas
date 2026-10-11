@@ -35,7 +35,11 @@ class FloatingService : Service() {
     private lateinit var manager: WindowManager
     private var bubble: View? = null
     private var bubbleParams: WindowManager.LayoutParams? = null
+    private var bubbleLabel: TextView? = null
     private var menu: View? = null
+    private var menuParams: WindowManager.LayoutParams? = null
+    private var confirming = false
+    private var confirmationToken = 0
     private var form: View? = null
     private lateinit var db: EntriesDb
 
@@ -106,6 +110,7 @@ class FloatingService : Service() {
             background = Ui.rounded(Ui.YELLOW,this@FloatingService,50)
             elevation = Ui.dp(this@FloatingService,6).toFloat()
             addView(TextView(this@FloatingService).apply {
+                bubbleLabel = this
                 text = "+"
                 setTextColor(Ui.DARK)
                 textSize = 39f
@@ -118,7 +123,11 @@ class FloatingService : Service() {
         val lp = params(diameter,diameter, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
             gravity = Gravity.TOP or Gravity.START
             x = settings.getInt("x", display.widthPixels - diameter - Ui.dp(this@FloatingService,12))
+                .coerceIn(0,(display.widthPixels-diameter).coerceAtLeast(0))
             y = settings.getInt("y", Ui.dp(this@FloatingService,210))
+                .coerceIn(Ui.dp(this@FloatingService,24),
+                    (display.heightPixels-diameter-Ui.dp(this@FloatingService,72))
+                        .coerceAtLeast(Ui.dp(this@FloatingService,24)))
         }
         bubble = button
         bubbleParams = lp
@@ -144,14 +153,21 @@ class FloatingService : Service() {
                         }
                         if (dragged) {
                             lp.x = (initialX+dx).coerceIn(0, (display.widthPixels-diameter).coerceAtLeast(0))
-                            lp.y = (initialY+dy).coerceIn(0, (display.heightPixels-diameter).coerceAtLeast(0))
+                            lp.y = (initialY+dy).coerceIn(
+                                Ui.dp(this@FloatingService,24),
+                                (display.heightPixels-diameter-Ui.dp(this@FloatingService,72))
+                                    .coerceAtLeast(Ui.dp(this@FloatingService,24)))
                             safeUpdate(v,lp)
+                            updateMenuPosition()
                         }
                         return true
                     }
                     MotionEvent.ACTION_UP -> {
-                        if (!dragged) toggleMenu()
-                        else settings.edit().putInt("x",lp.x).putInt("y",lp.y).apply()
+                        if (!dragged && !confirming) toggleMenu()
+                        else if (dragged) {
+                            settings.edit().putInt("x",lp.x).putInt("y",lp.y).apply()
+                            updateMenuPosition()
+                        }
                         return true
                     }
                 }
@@ -181,20 +197,80 @@ class FloatingService : Service() {
             })
         }
         val boxWidth = Ui.dp(this,205)
-        val boxHeight = Ui.dp(this,212)
-        val display = resources.displayMetrics
-        val current = bubbleParams
         val lp = params(boxWidth, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (current?.x ?: 10).coerceIn(0,(display.widthPixels-boxWidth).coerceAtLeast(0))
-            val proposedY = (current?.y ?: 100) - boxHeight - Ui.dp(this@FloatingService,10)
-            y = if (proposedY > 30) proposedY else ((current?.y ?: 100) + Ui.dp(this@FloatingService,65))
         }
         try {
             manager.addView(panel,lp)
             menu = panel
-        } catch (_: Exception) { menu = null }
+            menuParams = lp
+            updateMenuPosition()
+            panel.alpha = 0f
+            panel.scaleX = 0.95f
+            panel.scaleY = 0.95f
+            panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(150L).start()
+        } catch (_: Exception) {
+            menu = null
+            menuParams = null
+        }
+    }
+
+    /** Keep the expanded actions attached to the moving bubble and on-screen. */
+    private fun updateMenuPosition() {
+        val panel = menu ?: return
+        val lp = menuParams ?: return
+        val anchor = bubbleParams ?: return
+        val display = resources.displayMetrics
+        val diameter = Ui.dp(this,58)
+        val panelWidth = Ui.dp(this,205)
+        val panelHeight = Ui.dp(this,212)
+        val gap = Ui.dp(this,10)
+        val safeTop = Ui.dp(this,24)
+        val safeBottom = Ui.dp(this,72)
+        lp.x = (if (anchor.x + diameter / 2 >= display.widthPixels / 2) {
+            anchor.x + diameter - panelWidth
+        } else {
+            anchor.x
+        }).coerceIn(0,(display.widthPixels-panelWidth).coerceAtLeast(0))
+        val above = anchor.y - panelHeight - gap
+        val below = anchor.y + diameter + gap
+        val bottomLimit = (display.heightPixels - panelHeight - safeBottom)
+            .coerceAtLeast(safeTop)
+        lp.y = (if (above >= safeTop) above else below)
+            .coerceIn(safeTop,bottomLimit)
+        safeUpdate(panel,lp)
+    }
+
+    /** The + itself briefly becomes a green check only after the DB confirms save. */
+    private fun showSavedOnBubble() {
+        val view = bubble ?: return
+        confirmationToken += 1
+        val currentToken = confirmationToken
+        confirming = true
+        view.background = Ui.rounded(Ui.GREEN,this,50)
+        bubbleLabel?.apply {
+            text = "✓"
+            setTextColor(Color.WHITE)
+            textSize = 32f
+            contentDescription = "Registro salvo com sucesso"
+        }
+        view.animate().scaleX(1.12f).scaleY(1.12f).setDuration(130L)
+            .withEndAction {
+                view.animate().scaleX(1f).scaleY(1f).setDuration(130L).start()
+            }.start()
+        view.postDelayed({
+            if (bubble === view && confirmationToken == currentToken) {
+                view.background = Ui.rounded(Ui.YELLOW,this,50)
+                bubbleLabel?.apply {
+                    text = "+"
+                    setTextColor(Ui.DARK)
+                    textSize = 39f
+                    contentDescription = "Abrir registro rápido do Primo"
+                }
+                confirming = false
+            }
+        }, 1100L)
     }
 
     private fun openForm(kind: String) {
@@ -203,19 +279,16 @@ class FloatingService : Service() {
             onSave = { entry ->
                 try {
                     db.save(entry)
-                    closeForm()
-                    if (GoalsStore(this).read().friendlyMessages) {
-                        val message = when(kind) {
-                            EntryTypes.RIDE -> "Boa, primo! Mais uma pra conta."
-                            EntryTypes.FUEL -> "Abastecimento anotado. Tá na conta!"
-                            else -> "Manutenção anotada, primo!"
-                        }
-                        Toast.makeText(this,message,Toast.LENGTH_SHORT).show()
-                    }
+                    closeMenu()
+                    showSavedOnBubble()
+                    true
                 } catch (e: Exception) {
                     Toast.makeText(this,"Erro ao salvar: ${e.message}",Toast.LENGTH_LONG).show()
+                    false
                 }
-            }, onCancel = { closeForm() })
+            },
+            onCancel = { closeForm(); closeMenu() },
+            onSaved = { closeForm(); closeMenu() })
         val availableWidth = resources.displayMetrics.widthPixels - Ui.dp(this,24)
         val lp = params(min(availableWidth,Ui.dp(this,350)),WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL).apply {
@@ -234,13 +307,19 @@ class FloatingService : Service() {
     private fun safeUpdate(view: View, lp: WindowManager.LayoutParams) {
         try { manager.updateViewLayout(view,lp) } catch (_: Exception) { }
     }
-    private fun closeMenu() { menu?.let { safelyRemove(it) }; menu = null }
+    private fun closeMenu() {
+        menu?.let { it.animate().cancel(); safelyRemove(it) }
+        menu = null
+        menuParams = null
+    }
     private fun closeForm() { form?.let { safelyRemove(it) }; form = null }
     private fun safelyRemove(view: View) { try { manager.removeView(view) } catch (_: Exception) {} }
 
     override fun onDestroy() {
+        confirmationToken += 1
         closeMenu(); closeForm()
-        bubble?.let { safelyRemove(it) }; bubble = null
+        bubble?.let { it.animate().cancel(); safelyRemove(it) }; bubble = null
+        bubbleLabel = null
         getSharedPreferences("state",MODE_PRIVATE).edit().putBoolean("overlay_running",false).apply()
         if (::db.isInitialized) db.close()
         super.onDestroy()

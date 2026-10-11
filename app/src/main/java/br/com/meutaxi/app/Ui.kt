@@ -71,8 +71,9 @@ object QuickEntryForm {
         context: Context,
         kind: String,
         original: Entry? = null,
-        onSave: (Entry) -> Unit,
-        onCancel: () -> Unit
+        onSave: (Entry) -> Boolean,
+        onCancel: () -> Unit,
+        onSaved: () -> Unit = {}
     ): View {
         val outer = ScrollView(context).apply { isFillViewport = false }
         val content = Ui.column(context, 16).apply {
@@ -119,7 +120,7 @@ object QuickEntryForm {
             content.addView(note)
         }
         content.addView(Ui.gap(context,16))
-        val save = Ui.button(context,"SALVAR",Ui.GREEN)
+        val save = Ui.button(context,"Salvar",Ui.BLUE)
         content.addView(save)
         content.addView(Ui.gap(context,8))
         val cancel = Ui.button(context,"Cancelar",0xFF64748B.toInt())
@@ -140,7 +141,18 @@ object QuickEntryForm {
                 payment = payment?.selectedItem?.toString() ?: original?.payment ?: "Dinheiro",
                 note = note?.text?.toString()?.trim()?.take(500) ?: original?.note ?: ""
             )
-            onSave(entry)
+            // The database callback must confirm persistence before UI signals success.
+            save.isEnabled = false
+            val persisted = try { onSave(entry) } catch (_: Exception) { false }
+            if (persisted) {
+                save.text = "✓ Salvo!"
+                save.background = Ui.rounded(Ui.GREEN,context)
+                save.setTextColor(Color.WHITE)
+                cancel.isEnabled = false
+                save.postDelayed({ onSaved() }, 260L)
+            } else {
+                save.isEnabled = true
+            }
         }
         return outer
     }

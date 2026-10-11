@@ -13,7 +13,7 @@ data class GoalSettings(
     val dailyCents: Long = 0,
     val weeklyEnabled: Boolean = false,
     val weeklyCents: Long = 0,
-    val friendlyMessages: Boolean = true
+    val friendlyMessages: Boolean = false
 ) {
     fun asJson(): JSONObject = JSONObject().apply {
         put("dailyEnabled",dailyEnabled); put("dailyCents",dailyCents)
@@ -31,17 +31,27 @@ data class GoalSettings(
             val weeklyOn = json.optBoolean("weeklyEnabled",false)
             require(!dailyOn || daily > 0) { "Meta diária inválida" }
             require(!weeklyOn || weekly > 0) { "Meta semanal inválida" }
-            return GoalSettings(dailyOn,daily,weeklyOn,weekly,json.optBoolean("friendlyMessages",true))
+            return GoalSettings(dailyOn,daily,weeklyOn,weekly,json.optBoolean("friendlyMessages",false))
         }
     }
 }
 
 class GoalsStore(context: Context) {
     private val prefs = context.getSharedPreferences("primo_goals",Context.MODE_PRIVATE)
+    init {
+        // v0.2 used true by default. Disable automatically once on upgrade; after
+        // migration the driver can explicitly re-enable the messages at any time.
+        if (!prefs.getBoolean("silent_default_v3_migrated", false)) {
+            prefs.edit()
+                .putBoolean("friendlyMessages",false)
+                .putBoolean("silent_default_v3_migrated",true)
+                .apply()
+        }
+    }
     fun read(): GoalSettings = GoalSettings(
         prefs.getBoolean("dailyEnabled",false), prefs.getLong("dailyCents",0),
         prefs.getBoolean("weeklyEnabled",false),prefs.getLong("weeklyCents",0),
-        prefs.getBoolean("friendlyMessages",true)
+        prefs.getBoolean("friendlyMessages",false)
     )
     fun save(settings: GoalSettings) {
         prefs.edit().putBoolean("dailyEnabled",settings.dailyEnabled)

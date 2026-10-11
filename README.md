@@ -2,7 +2,7 @@
 
 Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
 
-> **Status**: código-fonte da versão 0.2.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+> **Status**: código-fonte da versão 0.3.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
 
 ## Funcionalidades
 
@@ -13,7 +13,9 @@ Aplicativo Android **offline e sem login** para registrar rapidamente corridas, 
 - Saldo parcial = valores de corridas menos gastos registrados; **não é lucro líquido**.
 - Histórico: ver, editar e excluir lançamentos.
 - Metas **diária e semanal independentes e opcionais**, definidas em R$, com porcentagem e restante; o progresso usa **apenas receitas de corridas**.
-- Mensagens curtas e bem-humoradas podem ser desligadas.
+- Mensagens bem-humoradas vêm **desligadas por padrão** (também ao atualizar da v0.2); podem ser ativadas manualmente nas configurações. Não há narração de áudio.
+- Registro via bolinha: o botão Salvar fica **verde com ✓ somente após gravar com sucesso**, as janelas fecham e a bolinha fica verde por aproximadamente 1 segundo, voltando depois ao `+` amarelo.
+- Enquanto a bolinha é movida, as ações abertas seguem sua posição e se adaptam ao espaço disponível; limitações dos recortes da tela devem ser testadas no dispositivo.
 - Backup JSON e restauração. Metas também são exportadas; backups antigos `meutaxi-backup-v1` continuam aceitos.
 - Marca Primo: identidade azul/amarelo, ícone e mascote na tela principal.
 
@@ -50,7 +52,7 @@ Sem rastreadores, anúncios ou servidor. Os dados ficam no aparelho, sem interne
 ## Testes antes de entregar ao seu pai
 
 1. Dar autorização de sobreposição no Redmi 13C (MIUI ou HyperOS).
-2. Abrir o aplicativo 99, mover a bolinha e registrar uma corrida com o aparelho parado.
+2. Abrir a 99, expandir o menu e arrastar a bolinha: os botões devem segui-la sem sair da tela. Registrar corrida com o aparelho parado e conferir o ✓ verde e fechamento do menu.
 3. Registrar gasolina e mecânico com descrição, verificar soma e edição.
 4. Configurar meta diária e semanal, registrar corrida, verificar progresso e restante.
 5. Reiniciar o aplicativo e verificar se os dados persistiram.

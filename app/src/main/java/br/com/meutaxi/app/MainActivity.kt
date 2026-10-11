@@ -346,20 +346,20 @@ class MainActivity : Activity() {
             onSave = { entry ->
                 try {
                     db.save(entry)
-                    dialog.dismiss()
-                    draw()
-                    Toast.makeText(this,if (goals.read().friendlyMessages) {
-                        when(kind) {
-                            EntryTypes.RIDE -> "Boa, primo! Mais uma pra conta."
-                            EntryTypes.FUEL -> "Abastecimento anotado. Tá na conta!"
-                            else -> "Manutenção anotada, primo!"
-                        }
-                    } else "Lançamento salvo!",Toast.LENGTH_SHORT).show()
+                    true
                 } catch (ex: Exception) {
                     Toast.makeText(this,"Erro ao salvar: ${ex.message}",Toast.LENGTH_LONG).show()
+                    false
                 }
             },
-            onCancel = { dialog.dismiss() }
+            onCancel = { dialog.dismiss() },
+            onSaved = {
+                dialog.dismiss()
+                draw()
+                if (goals.read().friendlyMessages) {
+                    Toast.makeText(this,"Anotado, primo!",Toast.LENGTH_SHORT).show()
+                }
+            }
         ))
         dialog.show()
     }
