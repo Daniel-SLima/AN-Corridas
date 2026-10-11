@@ -2,7 +2,7 @@
 
 Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
 
-> **Status**: código-fonte da versão 0.3.1. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+> **Status**: código-fonte da versão 0.5.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
 
 ## Funcionalidades
 
@@ -28,7 +28,7 @@ Aplicativo Android **offline e sem login** para registrar rapidamente corridas, 
 
 O projeto usa Android Gradle Plugin 9.1.1, Java 17, Gradle 9.3.1 e Android SDK 36, com Kotlin compilado pelo plugin Android. Você pode compilar localmente usando `gradle :app:assembleDebug` se tiver o Android SDK.
 
-**Atenção à assinatura:** APK debug é assinado automaticamente com uma chave temporária que muda entre ambientes/builds de CI. Para atualizar a instalação sem perder dados, configure uma keystore permanente nos secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` e utilize APK release assinado. Guarde a keystore em local seguro; não faça commit dela no repositório. Antes de trocar a assinatura, exporte backup e só então reinstale.
+**Assinatura permanente:** GitHub Actions gera somente APK release assinado; conserve a mesma chave, o applicationId e incremente o versionCode. O secret antigo ANDROID_KEYSTORE_BASE64 não é mais utilizado.
 
 ### Assinatura permanente (Primo 0.3.1 em diante)
 
@@ -96,3 +96,24 @@ Sem rastreadores, anúncios ou servidor. Os dados ficam no aparelho, sem interne
 7. Fechar, reabrir e reiniciar o aparelho; conferir dados preservados e que a bolinha não ativa sozinha se estiver desativada.
 
 A compilação automática é um teste técnico do código. A compatibilidade específica com o Redmi 13C/MIUI/HyperOS precisa de validação no próprio aparelho.
+
+## Primo 0.5.0 — fechamento, widget e refinamentos
+
+- **Mais → Fechamento financeiro**: receitas por origem (Rua/99/Uber Taxi), por meio de pagamento, despesas separadas por gasolina/mecânico, total, média de corrida e saldo parcial.
+- **Exportar fechamento CSV** do período selecionado (Hoje, Ontem, Semana, Mês ou outro dia), com delimitador ponto e vírgula, UTF-8 BOM e tratamento de textos contra fórmulas maliciosas em planilhas.
+- **X ao lado da meta no menu flutuante**: fecha a bolinha imediatamente, mesmo sem meta configurada; tocar no + continua expandindo/recolhendo. Desligar não apaga nenhum lançamento.
+- **Widget Primo na tela inicial do Android**: toque para ativar e abrir o menu da bolinha, sem navegar pelas telas do app. Sem permissão de sobreposição, abre o Primo para orientar o usuário. Alguns sistemas MIUI/HyperOS podem exigir liberação de execução em segundo plano.
+- **Cabeçalho com mais respiro**: tratamento dos recortes/status bar no Android 15/16 e margem de 12dp no topo.
+- **Mecânico redesenhado**: chave inglesa vetorial mais clara, legível em tamanhos pequenos.
+- Mantidos o banco SQLite, o backup JSON, o identificador do app e assinatura fixa. `versionCode=6`; instalar sobre a 0.4.0.
+
+### QA sugerido 0.5.0
+
+1. Atualizar a 0.4.0 diretamente sem perder as corridas nem metas.
+2. Conferir a margem do topo em Samsung Android 16 e Redmi 13C, com barra de status visível.
+3. Conferir ícone Mecânico na home, histórico e menu flutuante (sem cortes).
+4. Abrir a bolinha, tocar no X e verificar remoção imediata, sem apagar dados; reativar pelo widget.
+5. Adicionar o widget Primo pelo menu de widgets do launcher; tocar quando serviço estiver ligado, desligado e com sobreposição desautorizada.
+6. Fechamento: comparar Rua/99/Uber, formas de pagamento e gastos com o histórico.
+7. Exportar CSV e conferir acentos, valores negativos, separador e texto livre seguro na planilha.
+8. Testar confirmação verde, meta concluída e bolinha arrastável na nova versão.

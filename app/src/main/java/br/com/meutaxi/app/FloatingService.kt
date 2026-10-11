@@ -31,6 +31,7 @@ import java.time.LocalDate
 class FloatingService : Service() {
     companion object {
         const val ACTION_STOP = "br.com.meutaxi.app.STOP_OVERLAY"
+        const val ACTION_OPEN_MENU = "br.com.meutaxi.app.OPEN_OVERLAY_MENU"
         private const val CHANNEL = "meutaxi_overlay"
         private const val NOTIFICATION_ID = 41
     }
@@ -78,6 +79,10 @@ class FloatingService : Service() {
         }
         if (bubble == null) {
             try { showBubble() } catch (_: Exception) { stopSelf() }
+        }
+        if (intent?.action == ACTION_OPEN_MENU) {
+            // Widget opens the menu even if the service was already running.
+            bubble?.post { if (bubble != null && menu == null && form == null) toggleMenu() }
         }
         return START_NOT_STICKY // Do not resurrect the overlay unexpectedly after process death.
     }
@@ -250,11 +255,34 @@ class FloatingService : Service() {
                 bottomMargin = Ui.dp(this@FloatingService,5)
             })
         }
-        compactGoalView()?.let { goal ->
-            panel.addView(Ui.gap(this,6))
-            panel.addView(goal,LinearLayout.LayoutParams(-1,WindowManager.LayoutParams.WRAP_CONTENT))
+        // A dedicated X beside the goal shuts the bubble down without
+        // reopening the app. Available even when no goal is configured.
+        panel.addView(Ui.gap(this,5))
+        val footer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
-        val boxWidth = Ui.dp(this,205)
+        val goal = compactGoalView() ?: Ui.text(this,"Bolinha ativa",13f,true).apply {
+            setTextColor(Ui.BLUE)
+            gravity = Gravity.CENTER
+        }
+        footer.addView(goal,LinearLayout.LayoutParams(0,Ui.dp(this,48),1f).apply {
+            rightMargin = Ui.dp(this@FloatingService,7)
+        })
+        footer.addView(TextView(this).apply {
+            text = "×"
+            textSize = 28f
+            gravity = Gravity.CENTER
+            setTextColor(Ui.RED)
+            background = Ui.rounded(0xFFFFE8E8.toInt(),this@FloatingService,13)
+            contentDescription = "Desligar bolinha flutuante"
+            setOnClickListener {
+                Toast.makeText(this@FloatingService,"Bolinha desligada",Toast.LENGTH_SHORT).show()
+                stopSelf()
+            }
+        },LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)))
+        panel.addView(footer)
+        val boxWidth = Ui.dp(this,245)
         val lp = params(boxWidth, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -289,7 +317,7 @@ class FloatingService : Service() {
         val anchor = bubbleParams ?: return
         val display = resources.displayMetrics
         val diameter = Ui.dp(this,58)
-        val panelWidth = Ui.dp(this,205)
+        val panelWidth = Ui.dp(this,245)
         // Use the real rendered menu height (optional goal label makes it taller).
         val panelHeight = panel.height.takeIf { it > 0 } ?: Ui.dp(this,280)
         val gap = Ui.dp(this,10)

@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -44,6 +45,8 @@ class MainActivity : Activity() {
     private var selectedDate: LocalDate = LocalDate.now()
     private val backupExportCode = 501
     private val backupImportCode = 502
+    private val csvExportCode = 503
+    private var pendingCsv: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +68,22 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.WHITE)
             elevation = Ui.dp(this@MainActivity,8).toFloat()
         }
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Ui.LIGHT)
+        }
+        // Android 15/16 can draw app content behind the status bar. Respect
+        // system insets and add extra breathing room above the Primo header.
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(false)
+            root.setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                view.setPadding(0,bars.top + Ui.dp(this@MainActivity,12),0,bars.bottom)
+                insets
+            }
+        } else {
+            root.setPadding(0,Ui.dp(this,12),0,0)
+        }
         root.addView(scroller,LinearLayout.LayoutParams(-1,0,1f))
         root.addView(navigation,LinearLayout.LayoutParams(-1,Ui.dp(this,71)))
         setContentView(root)
@@ -95,6 +113,7 @@ class MainActivity : Activity() {
             1 -> drawHistoryPage()
             2 -> drawGoalsPage()
             3 -> drawMorePage()
+            4 -> drawClosingPage()
             else -> drawHome()
         }
         drawNavigation()
@@ -239,11 +258,105 @@ class MainActivity : Activity() {
         content.addView(Ui.gap(this,6))
         add("Configurações e segurança dos seus dados.",14f)
         content.addView(Ui.gap(this,17))
+        action("Fechamento financeiro",Ui.BLUE,"history") {
+            tab = 4
+            draw()
+            scroller.scrollTo(0,0)
+        }
         action("Configurar metas e mensagens",Ui.BLUE,"settings") { showGoalsDialog() }
         action("Exportar backup",0xFF475569.toInt(),"backup") { exportBackup() }
         action("Importar backup",0xFF475569.toInt(),"restore") { importBackup() }
         content.addView(Ui.gap(this,18))
         add("Seus registros ficam no aparelho e funcionam sem internet. Exporte um backup regularmente.",14f)
+    }
+
+    /**
+     * Fechamento financeiro somente de registros locais: sem alterações na base,
+     * e sem confundir faturamento registrado com lucro líquido.
+     */
+    private fun drawClosingPage() {
+        add("Fechamento financeiro",28f,true)
+        content.addView(Ui.gap(this,6))
+        add("Confira de onde veio o dinheiro e onde gastou.",14f)
+        content.addView(Ui.gap(this,12))
+        showPeriodSelector()
+        val (start,end,periodName) = range()
+        val entries = db.between(start,end)
+        val report = ClosingReport.calculate(entries)
+        content.addView(Ui.gap(this,14))
+        card("RECEBIDO — $periodName",Money.show(report.received),
+            "${report.rides} corridas • média de ${Money.show(report.averageRide)} por corrida",Ui.GREEN)
+        content.addView(Ui.gap(this,8))
+        val amounts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        amounts.addView(smallCard("GASTOS",Money.show(report.expenses),Ui.RED),
+            LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin = Ui.dp(this@MainActivity,5) })
+        amounts.addView(smallCard("SALDO PARCIAL",Money.show(report.balance),Ui.BLUE),
+            LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin = Ui.dp(this@MainActivity,5) })
+        content.addView(amounts)
+        content.addView(Ui.gap(this,6))
+        add("Saldo parcial = corridas − gastos registrados. Não é lucro líquido.",12f)
+        showBreakdown("De onde vieram as corridas",report.bySource)
+        showBreakdown("Como recebeu pelas corridas",report.byPayment)
+        showBreakdown("Gastos registrados",listOf(
+            ReportItem("Gasolina",report.fuel,report.fuelCount),
+            ReportItem("Mecânico",report.repair,report.repairCount)
+        ).filter { it.count > 0 })
+        if (entries.isNotEmpty()) {
+            action("Exportar fechamento (CSV)",Ui.BLUE,"backup") { exportClosingCsv() }
+            add("O CSV contém apenas o período selecionado, para abrir em uma planilha.",13f)
+        } else {
+            content.addView(Ui.gap(this,12))
+            add("Sem lançamentos neste período.",14f)
+        }
+        content.addView(Ui.gap(this,12))
+        action("Voltar",0xFF64748B.toInt(),"more") {
+            tab = 3; draw(); scroller.scrollTo(0,0)
+        }
+        content.addView(Ui.gap(this,22))
+    }
+
+    private fun showBreakdown(title: String, rows: List<ReportItem>) {
+        content.addView(Ui.gap(this,17))
+        add(title,20f,true)
+        content.addView(Ui.gap(this,8))
+        val section = Ui.column(this,14).apply {
+            background = Ui.rounded(Color.WHITE,this@MainActivity,15)
+        }
+        if (rows.isEmpty()) {
+            section.addView(Ui.text(this,"Nenhum registro no período.",14f))
+        } else rows.forEachIndexed { index, item ->
+            if (index > 0) section.addView(Ui.gap(this,10))
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val suffix = if (item.count == 1) "1 registro" else "${item.count} registros"
+            row.addView(Ui.text(this,"${item.label}  •  $suffix",15f),
+                LinearLayout.LayoutParams(0,-2,1f))
+            row.addView(Ui.text(this,Money.show(item.amount),16f,true).apply {
+                setTextColor(if (title == "Gastos registrados") Ui.RED else Ui.BLUE)
+                gravity = Gravity.END
+            })
+            section.addView(row)
+        }
+        content.addView(section)
+    }
+
+    private fun exportClosingCsv() {
+        val (start,end,_) = range()
+        val entries = db.between(start,end)
+        if (entries.isEmpty()) {
+            Toast.makeText(this,"Não há registros para exportar.",Toast.LENGTH_SHORT).show()
+            return
+        }
+        pendingCsv = ClosingReport.csv(entries)
+        val name = "primo-fechamento-${LocalDate.now()}-periodo-$period.csv"
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/csv"
+            putExtra(Intent.EXTRA_TITLE,name)
+        }
+        startActivityForResult(intent,csvExportCode)
     }
 
     /** This compact card never shows earnings above the target: the detail remains in Metas. */
@@ -277,7 +390,7 @@ class MainActivity : Activity() {
         val items = listOf(Triple("Início","home",0),Triple("Histórico","history",1),
             Triple("Metas","target",2),Triple("Mais","more",3))
         items.forEach { (label,icon,index) ->
-            val chosen = tab == index
+            val chosen = tab == index || (tab == 4 && index == 3)
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -572,6 +685,14 @@ class MainActivity : Activity() {
         val uri = data?.data ?: return
         try {
             when (requestCode) {
+                csvExportCode -> {
+                    val reportText = pendingCsv ?: error("Relatório expirado. Exporte novamente.")
+                    contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use {
+                        it.write(reportText)
+                    } ?: error("Não foi possível escrever o CSV")
+                    pendingCsv = null
+                    Toast.makeText(this,"Fechamento exportado!",Toast.LENGTH_LONG).show()
+                }
                 backupExportCode -> {
                     contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use {
                         val json = JSONObject(db.backupJson()).apply {

@@ -57,16 +57,24 @@ class PrimoIcon(private val kind: String, private val ink: Int, private val px: 
                 line(17f,4.5f,20f,7.5f)
             }
             "repair" -> {
-                val p=Path().apply {
-                    moveTo(14.5f,4f); lineTo(17.5f,7f); lineTo(15.3f,9.2f)
-                    lineTo(12.4f,8.4f); lineTo(11.4f,5.4f)
-                    cubicTo(7f,5f,5f,8.4f,6f,12f)
-                    lineTo(3.7f,17f); cubicTo(2.5f,20.5f,6.5f,22f,8.4f,19f)
-                    lineTo(12.5f,14f); cubicTo(16.7f,15f,20.7f,10.5f,19f,6.4f)
+                // Redrawn wrench: a simple open jaw and a long diagonal handle.
+                // Keep the silhouette clean at small sizes (20-24 dp).
+                val wrench = Path().apply {
+                    moveTo(19.4f,3.5f)
+                    lineTo(15.4f,7.5f)
+                    lineTo(16.1f,9.7f)
+                    lineTo(18.3f,10.4f)
+                    lineTo(21.4f,7.3f)
+                    cubicTo(22.0f,11.3f,18.9f,15.2f,14.8f,14.8f)
+                    lineTo(7.4f,21.2f)
+                    cubicTo(5.3f,23.0f,2.1f,19.7f,4.0f,17.6f)
+                    lineTo(10.5f,10.5f)
+                    cubicTo(10.1f,6.3f,15.1f,2.5f,19.4f,3.5f)
                     close()
                 }
-                canvas.drawPath(p,paint)
-                canvas.drawCircle(6f,18f,0.8f,paint)
+                paint.strokeWidth = 1.8f
+                canvas.drawPath(wrench,paint)
+                canvas.drawCircle(5.7f,19.4f,0.8f,paint)
             }
             "target" -> {
                 canvas.drawCircle(11f,13f,8f,paint)
