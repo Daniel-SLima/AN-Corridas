@@ -28,6 +28,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/primo_widget_info" />
         </receiver>
+        <provider
+            android:name=".ReportShareProvider"
+            android:authorities="br.com.meutaxi.app.exports"
+            android:exported="false"
+            android:grantUriPermissions="true" />
         <service
             android:name=".FloatingService"
             android:exported="false"

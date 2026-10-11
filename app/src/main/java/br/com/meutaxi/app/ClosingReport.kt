@@ -59,7 +59,7 @@ object ClosingReport {
     fun csv(entries: List<Entry>): String {
         val date = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt","BR"))
         val hour = DateTimeFormatter.ofPattern("HH:mm", Locale("pt","BR"))
-        val result = StringBuilder("\uFEFFData;Hora;Categoria;Origem;Pagamento;Descrição;Valor (R$)\r\n")
+        val result = StringBuilder("Data;Hora;Categoria;Origem;Pagamento;Descrição;Valor (R$)\r\n")
         entries.sortedWith(compareBy<Entry> { it.createdAt }.thenBy { it.id }).forEach { entry ->
             val time = Instant.ofEpochMilli(entry.createdAt).atZone(ZoneId.systemDefault())
             val signed = if (entry.kind == EntryTypes.RIDE) entry.cents else -entry.cents

@@ -117,3 +117,22 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 6. Fechamento: comparar Rua/99/Uber, formas de pagamento e gastos com o histórico.
 7. Exportar CSV e conferir acentos, valores negativos, separador e texto livre seguro na planilha.
 8. Testar confirmação verde, meta concluída e bolinha arrastável na nova versão.
+
+## Primo 0.5.1 — estabilidade, compartilhamento e Excel
+
+- Em **Mais**, o cartão **Primo na tela inicial** tenta sugerir a instalação do widget pelo launcher Android; oferece instruções se o aparelho não der suporte.
+- No Fechamento financeiro, **Salvar Excel / Compartilhar Excel** gera **.xlsx real**, com abas **Resumo** e **Lançamentos**, células de valores numéricos e acentuação Unicode sem erro de CSV.
+- Opções separadas: **CSV compatível (Windows-1252)** para o visualizador que mostrou DescriÃ§Ã£o e **CSV UTF-8 sem BOM** para importadores com seleção de charset. O formato recomendado é Excel.
+- Compartilhamento usa ContentProvider específico somente de leitura, com URI temporária para o seletor do Android; sem acesso aos registros internos.
+- Layout do fechamento apresenta origem, pagamento e gastos com descrições em duas linhas, evitando colisão com valores. Os totais são recalculados diretamente do SQLite a cada abertura.
+- Registro duplicado: o salvamento já impede duplo toque durante a confirmação. Edições agora conferem que realmente alteraram uma linha do banco antes de confirmar.
+- A tela refresca ao voltar e na virada da meia-noite (sem serviço extra), mantendo metas e histórico do novo dia consistentes. A restauração do backup segue validada e transacional quanto aos registros.
+- Mesmo applicationId, assinatura permanente e banco de dados. `versionCode=7`. Atualização direta por cima da versão 0.5.0.
+
+### Testes
+1. Regressão do histórico após atualização e importação de backup; nunca desinstalar previamente.
+2. Comparar fechamento por origem e pagamento com valores reais de corridas, incluindo edição e exclusão.
+3. Confirmar os acentos em Excel (.xlsx), CSV compatível (Windows-1252) no visualizador Android e CSV UTF-8 em importador configurado para UTF-8.
+4. Compartilhar XLSX e CSV com WhatsApp ou outro app e conferir leitura sem expor o arquivo privado do banco.
+5. Testar sugestão do widget em Samsung e Xiaomi; fallback manual quando indisponível.
+6. Testar mudança de data com app aberto, repetição do botão Salvar e backup sem perda de dados.

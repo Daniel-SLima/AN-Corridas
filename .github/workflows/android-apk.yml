@@ -59,6 +59,9 @@ jobs:
             exit 1
           fi
           echo 'Assinatura permanente conferida.'
+      - name: Testar cálculos, CSV e XLSX
+        shell: bash
+        run: gradle --no-daemon :app:testDebugUnitTest
       - name: Compilar APK release assinado
         shell: bash
         run: gradle --no-daemon :app:assembleRelease

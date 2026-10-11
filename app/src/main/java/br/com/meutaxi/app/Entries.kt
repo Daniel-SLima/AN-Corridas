@@ -88,13 +88,14 @@ class EntriesDb(context: Context) : SQLiteOpenHelper(context, "meutaxi.db", null
         return if (entry.id == 0L) {
             db.insertOrThrow("entries", null, values(entry))
         } else {
-            db.update("entries", values(entry), "id=?", arrayOf(entry.id.toString()))
+            val changed=db.update("entries", values(entry), "id=?", arrayOf(entry.id.toString()))
+            check(changed==1) { "Lançamento não encontrado para editar" }
             entry.id
         }
     }
 
-    fun delete(id: Long) {
-        writableDatabase.delete("entries", "id=?", arrayOf(id.toString()))
+    fun delete(id: Long):Boolean {
+        return writableDatabase.delete("entries", "id=?", arrayOf(id.toString()))==1
     }
 
     fun between(start: Long, endExclusive: Long): List<Entry> {
