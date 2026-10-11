@@ -32,17 +32,19 @@ O projeto usa Android Gradle Plugin 9.1.1, Java 17, Gradle 9.3.1 e Android SDK 3
 
 ### Assinatura permanente (Primo 0.3.1 em diante)
 
-Desde 0.3.1, o GitHub Actions **não gera APK debug se faltarem as credenciais**. O build exige um único certificado permanente e verifica sua identidade antes e depois da compilação. A chave NÃO faz parte deste repositório público.
+Desde 0.3.1, o GitHub Actions **só produz APK release assinado**: se faltarem os três secrets necessários, ele falha em vez de criar um APK debug. O certificado é verificado antes e depois da compilação.
 
-1. Extraia o ZIP privado de assinatura entregue separadamente ao proprietário. Guarde-o com segurança (backup offline).
-2. No Windows com GitHub CLI (`gh`) autenticado, entre na pasta extraída e execute: `gh secret set -R Daniel-SLima/AN-Corridas -f primo-gh-secrets.env`. Ou cadastre os 4 secrets manualmente em Settings → Secrets and variables → Actions.
-3. Abra Actions → Gerar APK Android assinado → Run workflow. Baixe o arquivo `Primo-APK-Release`.
+**Assinatura no GitHub:** o arquivo `.github/primo-release.jks.enc` contém somente uma cópia **criptografada** da chave, usando AES-256-CBC e PBKDF2 (400.000 iterações). A senha de criptografia é longa e aleatória, mantida exclusivamente no secret `ANDROID_KEYSTORE_PASSWORD`. A keystore ORIGINAL nunca deve ser enviada ao repositório. O antigo secret `ANDROID_KEYSTORE_BASE64` não é mais utilizado e pode ser removido do GitHub por segurança.
+
+1. Preserve o ZIP privado de assinatura entregue separadamente ao proprietário, em backup offline; ele é essencial para recuperar a chave e fazer futuras atualizações.
+2. Configure `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` em Settings → Secrets and variables → Actions → Repository secrets. O secret Base64 não é mais necessário.
+3. Abra Actions → Gerar APK Android assinado → Run workflow. Baixe o artefato `Primo-APK-Release`.
 4. **Migração da v0.3.0 debug:** antes de desinstalar, use Exportar backup. Instale a primeira release com assinatura permanente e use Importar backup. A chave privada da v0.3.0 debug não está disponível, portanto é necessária uma última desinstalação.
 5. Futuras versões devem manter o `applicationId`, a mesma keystore e `versionCode` crescente para atualizar por cima preservando registros.
 
 Impressão digital pública SHA-256: `12:53:89:DE:DA:49:21:5B:78:19:4D:B9:31:2D:D1:E1:1E:86:DE:F7:97:E0:0E:07:80:59:02:96:AD:F4:BF:D3`.
 
-**NUNCA** publique a keystore `.jks`, `primo-gh-secrets.env` ou senhas em commits, issues ou prints.
+**NUNCA** publique a keystore `.jks`, `primo-gh-secrets.env` ou senhas em commits, issues ou prints. O arquivo `.jks.enc` versionado é criptografado, mas deve continuar protegido por uma senha forte e secreta.
 
 ## Uso da bolinha no Xiaomi
 

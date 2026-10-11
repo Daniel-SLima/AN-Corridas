@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -24,8 +23,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
-            echo "ERRO: configure os 4 secrets ANDROID_KEYSTORE_*; não geraremos APK debug temporário." >&2
+          if [[ -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "ERRO: configure ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS e ANDROID_KEY_PASSWORD; não geraremos APK debug temporário." >&2
             exit 1
           fi
       - name: Configurar Java 17
@@ -50,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/production-keystore.jks
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 400000 -in .github/primo-release.jks.enc -out app/production-keystore.jks -pass env:ANDROID_KEYSTORE_PASSWORD
           EXPECTED=$(tr -d '\r\n' < .github/PRIMO_SIGNING_SHA256)
           ACTUAL=$(keytool -list -v -keystore app/production-keystore.jks \
             -alias "$ANDROID_KEY_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" 2>/dev/null \
