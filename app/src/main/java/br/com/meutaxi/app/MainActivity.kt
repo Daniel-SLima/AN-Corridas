@@ -53,7 +53,7 @@ class MainActivity : Activity() {
     private val backupExportCode = 501
     private val backupImportCode = 502
     private val csvExportCode = 503
-    private data class ExportSelection(val kind:String,val start:Long,val end:Long,val title:String)
+    private data class ExportSelection(val start:Long,val end:Long,val title:String)
     private var exportSelection: ExportSelection? = null
     private val midnightHandler = Handler(Looper.getMainLooper())
     private val midnightRefresh = object:Runnable {
@@ -70,7 +70,6 @@ class MainActivity : Activity() {
         savedInstanceState?.let { state ->
             if (state.containsKey("export_start")) {
                 exportSelection = ExportSelection(
-                    state.getString("export_kind","xlsx") ?: "xlsx",
                     state.getLong("export_start"),state.getLong("export_end"),
                     state.getString("export_title","Período selecionado") ?: "Período selecionado")
             }
@@ -127,7 +126,6 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         exportSelection?.let {
-            outState.putString("export_kind",it.kind)
             outState.putLong("export_start",it.start)
             outState.putLong("export_end",it.end)
             outState.putString("export_title",it.title)
@@ -304,11 +302,51 @@ class MainActivity : Activity() {
         content.addView(Ui.gap(this,6))
         add("Configurações e segurança dos seus dados.",14f)
         content.addView(Ui.gap(this,17))
-        action("Fechamento financeiro",Ui.BLUE,"history") {
-            tab = 4
-            draw()
-            scroller.scrollTo(0,0)
+        val (startReport,endReport,titleReport)=range()
+        val todayReport=ClosingReport.calculate(db.between(startReport,endReport))
+        val closingCard=Ui.column(this,14).apply {
+            background=Ui.rounded(Color.WHITE,this@MainActivity,17)
         }
+        closingCard.addView(Ui.text(this,"Fechamento financeiro",21f,true))
+        closingCard.addView(Ui.gap(this,5))
+        val info="Período: "+titleReport+" • "+todayReport.rides+" corridas • "+
+            Money.show(todayReport.received)+" recebidos"
+        closingCard.addView(Ui.text(this,info,14f))
+        closingCard.addView(Ui.gap(this,13))
+        val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+        listOf(Triple("Ver","eye",0),Triple("Baixar","download",1),
+            Triple("Compartilhar","share",2)).forEachIndexed { i,(label,ico,index) ->
+            val tile=LinearLayout(this).apply {
+                orientation=LinearLayout.VERTICAL
+                gravity=Gravity.CENTER
+                background=Ui.rounded(if(i==0) 0xFFFFF4C1.toInt() else 0xFFEAF3FA.toInt(),
+                    this@MainActivity,13)
+                contentDescription=label+" fechamento"
+                isFocusable=true
+                setOnClickListener {
+                    Ui.tapFeedback(this)
+                    when(index) {
+                        0 -> { tab=4; draw(); scroller.scrollTo(0,0) }
+                        1 -> downloadClosingCsv()
+                        else -> shareClosingCsv()
+                    }
+                }
+            }
+            tile.addView(ImageView(this).apply {
+                setImageDrawable(primoIcon(this@MainActivity,ico,Ui.BLUE,24))
+            },LinearLayout.LayoutParams(Ui.dp(this,24),Ui.dp(this,24)))
+            tile.addView(Ui.gap(this,5))
+            tile.addView(Ui.text(this,label,13f,true).apply {
+                gravity=Gravity.CENTER
+                setTextColor(Ui.BLUE)
+                maxLines=1
+            })
+            row.addView(tile,LinearLayout.LayoutParams(0,Ui.dp(this,78),1f).apply {
+                if(i>0) leftMargin=Ui.dp(this@MainActivity,6)
+            })
+        }
+        closingCard.addView(row)
+        content.addView(closingCard)
         content.addView(Ui.gap(this,13))
         val widgetCard = Ui.column(this,16).apply {
             background = Ui.rounded(Color.WHITE,this@MainActivity,18)
@@ -356,6 +394,19 @@ class MainActivity : Activity() {
         add("Confira de onde veio o dinheiro e onde gastou.",14f)
         content.addView(Ui.gap(this,12))
         showPeriodSelector()
+        content.addView(Ui.gap(this,8))
+        val topActions=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+        topActions.addView(Ui.iconButton(this,"Baixar","download",Ui.BLUE).apply {
+            textSize=14f; setOnClickListener { downloadClosingCsv() }
+        },LinearLayout.LayoutParams(0,Ui.dp(this,52),1f).apply {
+            rightMargin=Ui.dp(this@MainActivity,5)
+        })
+        topActions.addView(Ui.iconButton(this,"Compartilhar","share",Ui.BLUE).apply {
+            textSize=14f; setOnClickListener { shareClosingCsv() }
+        },LinearLayout.LayoutParams(0,Ui.dp(this,52),1f).apply {
+            leftMargin=Ui.dp(this@MainActivity,5)
+        })
+        content.addView(topActions)
         val (start,end,periodName) = range()
         val entries = db.between(start,end)
         val report = ClosingReport.calculate(entries)
@@ -385,16 +436,7 @@ class MainActivity : Activity() {
             ReportItem("Gasolina",report.fuel,report.fuelCount),
             ReportItem("Mecânico",report.repair,report.repairCount)
         ).filter { it.count > 0 })
-        if (entries.isNotEmpty()) {
-            content.addView(Ui.gap(this,9))
-            add("Levar o fechamento",19f,true)
-            action("Salvar Excel (.xlsx)",Ui.GREEN,"backup") { startReportExport("xlsx") }
-            action("Compartilhar Excel (.xlsx)",Ui.BLUE,"backup") { shareReport("xlsx") }
-            action("Salvar CSV compatível (.csv)",0xFF475569.toInt(),"backup") { startReportExport("csv1252") }
-            action("Compartilhar CSV compatível",0xFF475569.toInt(),"backup") { shareReport("csv1252") }
-            action("Salvar CSV UTF-8 (.csv)",0xFF64748B.toInt(),"backup") { startReportExport("csv8") }
-            add("Recomendado: Excel. CSV compatível usa Windows-1252 para planilhas que exibiam acentos errados. CSV UTF-8 é ideal para importadores que permitem selecionar a codificação.",13f)
-        } else {
+        if (entries.isEmpty()) {
             content.addView(Ui.gap(this,12))
             add("Sem lançamentos neste período.",14f)
         }
@@ -438,62 +480,55 @@ class MainActivity : Activity() {
         content.addView(section)
     }
 
-    private fun startReportExport(kind:String) {
+    /** Fixed CSV format for Android spreadsheet apps validated with the user. */
+    private fun csvBytes(items:List<Entry>):ByteArray =
+        ClosingReport.csv(items).toByteArray(Charset.forName("windows-1252"))
+
+    private fun downloadClosingCsv() {
         val (start,end,title)=range()
-        if (db.between(start,end).isEmpty()) {
-            Toast.makeText(this,"Sem registros no período.",Toast.LENGTH_SHORT).show()
+        if(db.between(start,end).isEmpty()) {
+            Toast.makeText(this,"Sem registros neste período.",Toast.LENGTH_SHORT).show()
             return
         }
-        exportSelection=ExportSelection(kind,start,end,title)
-        val ext=if(kind=="xlsx")"xlsx" else "csv"
-        val mime=if(kind=="xlsx")
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" else "text/csv"
-        val filename="primo-fechamento-"+LocalDate.now().toString()+
-            "-"+period+"-"+kind+"."+ext
-        val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+        exportSelection=ExportSelection(start,end,title)
+        val fileTag=when(period) {
+            0 -> "hoje"
+            1 -> "ontem"
+            2 -> "semana"
+            3 -> "mes"
+            else -> selectedDate.toString()
+        }
+        val filename="primo-fechamento-"+fileTag+"-"+LocalDate.now()+".csv"
+        val picker=Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type=mime
+            type="text/csv"
             putExtra(Intent.EXTRA_TITLE,filename)
         }
-        startActivityForResult(intent,csvExportCode)
+        startActivityForResult(picker,csvExportCode)
     }
 
-    private fun writeReport(out:java.io.OutputStream,kind:String,entries:List<Entry>,title:String) {
-        if(kind=="xlsx") PrimoXlsx.write(out,entries,title)
-        else {
-            val csv=ClosingReport.csv(entries)
-            val charset=if(kind=="csv1252") Charset.forName("windows-1252") else Charsets.UTF_8
-            out.write(csv.toByteArray(charset))
-            out.flush()
-        }
-    }
-
-    private fun shareReport(kind:String) {
-        val (start,end,title)=range()
-        val entries=db.between(start,end)
-        if (entries.isEmpty()) {
-            Toast.makeText(this,"Sem registros no período.",Toast.LENGTH_SHORT).show()
+    private fun shareClosingCsv() {
+        val (start,end,_)=range()
+        val items=db.between(start,end)
+        if(items.isEmpty()) {
+            Toast.makeText(this,"Sem registros neste período.",Toast.LENGTH_SHORT).show()
             return
         }
         try {
-            val ext=if(kind=="xlsx")"xlsx" else "csv"
-            val path=File(cacheDir,"primo_shared")
-            if(!path.exists() && !path.mkdirs()) error("Sem pasta para compartilhar")
-            val file=File(path,"fechamento."+ext)
-            file.outputStream().use { writeReport(it,kind,entries,title) }
-            val uri=Uri.parse("content://"+packageName+".exports/fechamento."+ext)
-            val mime=if(kind=="xlsx")
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" else "text/csv"
+            val directory=File(cacheDir,"primo_shared")
+            if(!directory.exists() && !directory.mkdirs())error("Não foi possível preparar o arquivo")
+            File(directory,"fechamento.csv").writeBytes(csvBytes(items))
+            val uri=Uri.parse("content://"+packageName+".exports/fechamento.csv")
             val send=Intent(Intent.ACTION_SEND).apply {
-                type=mime
+                type="text/csv"
                 putExtra(Intent.EXTRA_STREAM,uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 clipData=ClipData.newUri(contentResolver,"Fechamento do Primo",uri)
             }
             startActivity(Intent.createChooser(send,"Compartilhar fechamento"))
-        } catch (ex:Exception) {
+        } catch(ex:Exception) {
             AlertDialog.Builder(this).setTitle("Não foi possível compartilhar")
-                .setMessage(ex.message ?: "Tente novamente.")
+                .setMessage(ex.message ?: "Tente novamente")
                 .setPositiveButton("OK",null).show()
         }
     }
@@ -831,7 +866,8 @@ class MainActivity : Activity() {
                     val choice=exportSelection ?: error("Volte ao fechamento e exporte novamente")
                     val entries=db.between(choice.start,choice.end)
                     contentResolver.openOutputStream(uri)?.use {
-                        writeReport(it,choice.kind,entries,choice.title)
+                        it.write(csvBytes(entries))
+                        it.flush()
                     } ?: error("Não foi possível escrever o arquivo")
                     exportSelection=null
                     Toast.makeText(this,"Fechamento exportado!",Toast.LENGTH_LONG).show()

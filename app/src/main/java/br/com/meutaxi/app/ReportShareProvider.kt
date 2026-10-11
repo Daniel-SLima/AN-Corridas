@@ -15,7 +15,6 @@ class ReportShareProvider:ContentProvider() {
     private fun file(uri:Uri):Pair<File,String> {
         val name=uri.lastPathSegment ?: throw FileNotFoundException("Arquivo ausente")
         val mime=when(name) {
-            "fechamento.xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             "fechamento.csv" -> "text/csv"
             else -> throw FileNotFoundException("Arquivo não permitido")
         }

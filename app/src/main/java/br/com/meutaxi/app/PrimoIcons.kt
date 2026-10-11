@@ -112,6 +112,23 @@ class PrimoIcon(private val kind: String, private val ink: Int, private val px: 
                 line(12f,1.5f,12f,4f);line(12f,20f,12f,22.5f)
                 line(1.5f,12f,4f,12f);line(20f,12f,22.5f,12f)
             }
+            "eye" -> {
+                val path=Path().apply {
+                    moveTo(2f,12f); cubicTo(6f,5f,18f,5f,22f,12f)
+                    cubicTo(18f,19f,6f,19f,2f,12f); close()
+                }
+                canvas.drawPath(path,paint); canvas.drawCircle(12f,12f,3f,paint)
+            }
+            "download" -> {
+                line(12f,3f,12f,16f); line(7f,11f,12f,16f,17f,11f)
+                line(4f,17f,4f,21f,20f,21f,20f,17f)
+            }
+            "share" -> {
+                canvas.drawCircle(18f,5f,2.5f,paint)
+                canvas.drawCircle(6f,12f,2.5f,paint)
+                canvas.drawCircle(18f,19f,2.5f,paint)
+                line(8.4f,10.9f,15.5f,6f); line(8.4f,13.1f,15.5f,18f)
+            }
             "check" -> line(4f,12.5f,10f,18f,20f,6f)
             "calendar" -> {
                 box(3f,5f,21f,21f,2f)

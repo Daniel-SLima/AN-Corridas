@@ -136,3 +136,9 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 4. Compartilhar XLSX e CSV com WhatsApp ou outro app e conferir leitura sem expor o arquivo privado do banco.
 5. Testar sugestão do widget em Samsung e Xiaomi; fallback manual quando indisponível.
 6. Testar mudança de data com app aberto, repetição do botão Salvar e backup sem perda de dados.
+
+## Primo 0.6.0 — Fechamento simplificado
+- Em Mais, apenas três botões agrupados: Ver, Baixar e Compartilhar. A tela detalhada mantém somente Baixar e Compartilhar.
+- Formato único de saída: CSV compatível Windows-1252. Exportação Excel foi retirada do aplicativo. Nome do arquivo identifica o período.
+- Ícones vetoriais e áreas de toque grandes preservam a legibilidade.
+- Banco de dados, backup e certificado permanente mantidos; versão interna 8, maior do que os builds anteriores.
