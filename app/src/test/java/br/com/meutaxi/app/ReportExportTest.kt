@@ -42,15 +42,15 @@ class ReportExportTest {
         val reopened=String(csv.toByteArray(charset),charset)
         assertEquals(csv,reopened)
         assertTrue(csv.startsWith("Fechamento Primo;"))
-        assertTrue(csv.contains("Início"))
+        assertTrue(csv.contains("Inicio"))
         assertTrue(csv.contains("05/10/2026"))
         assertTrue(csv.contains("11/10/2026"))
-        assertTrue(csv.contains("Data;Hora;Categoria;Origem;Pagamento;Descrição;Ganhos (R$);Gastos (R$)"))
-        assertTrue(csv.contains("\"SEÇÃO: CORRIDAS\""))
-        assertTrue(csv.contains("\"SEÇÃO: GASOLINA\""))
-        assertTrue(csv.contains("\"SEÇÃO: MECÂNICO\""))
-        assertTrue(csv.contains("Praça da Sé"))
-        assertTrue(csv.contains("Troca de óleo"))
+        assertTrue(csv.contains("Data;Hora;Categoria;Origem;Pagamento;Descricao;Ganhos (R$);Gastos (R$)"))
+        assertTrue(csv.contains("\"SECAO: CORRIDAS\""))
+        assertTrue(csv.contains("\"SECAO: GASOLINA\""))
+        assertTrue(csv.contains("\"SECAO: MECANICO\""))
+        assertTrue(csv.contains("Praca da Se"))
+        assertTrue(csv.contains("Troca de oleo"))
         assertTrue(csv.contains("\"TOTAL\";;;;;;250,00;170,00"))
         assertTrue(csv.contains("\"SALDO PARCIAL\";;;;;;80,00;"))
         assertFalse(csv.contains("\uFEFF"))
@@ -63,9 +63,9 @@ class ReportExportTest {
         val csv=ClosingReport.csv(listOf(bad))
         assertTrue(csv.contains("\"'=SUM(1;2) Outra frase\""))
         assertTrue(csv.contains(";12,34\r\n"))
-        assertTrue(csv.contains("\"SEÇÃO: MECÂNICO\""))
+        assertTrue(csv.contains("\"SECAO: MECANICO\""))
         val quoted=ClosingReport.csv(listOf(bad.copy(note="Troca \"especial\"; óleo")))
-        assertTrue(quoted.contains("\"Troca \"\"especial\"\"; óleo\""))
+        assertTrue(quoted.contains("\"Troca \"\"especial\"\"; oleo\""))
     }
 
     @Test fun emptyAndExpenseOnlyAreHandled() {
@@ -98,5 +98,20 @@ class ReportExportTest {
         val csv=ClosingReport.csv(many)
         assertEquals(1000,csv.lines().count { it.contains("10,00") && !it.contains("TOTAL") && !it.contains("SALDO") })
         assertEquals(csv,String(csv.toByteArray(charset),charset))
+    }
+
+    @Test fun textExportIsEncodingIndependentAndDoesNotChangeOriginalRecords() {
+        val original = Entry(id=15,kind=EntryTypes.REPAIR,cents=43000,
+            createdAt=1791700600000L,note="Troca de óleo; suspensão, revisão; São João")
+        val export = ClosingReport.csv(listOf(original))
+        assertTrue(export.contains("Troca de oleo; suspensao, revisao; Sao Joao"))
+        assertEquals("Troca de óleo; suspensão, revisão; São João",original.note)
+        assertTrue(export.all { it == '\r' || it == '\n' || it.code in 32..126 })
+        val utf8=export.toByteArray(Charsets.UTF_8)
+        val legacy=export.toByteArray(Charset.forName("windows-1252"))
+        assertArrayEquals(utf8,legacy)
+        assertFalse(export.contains("Ã"))
+        assertTrue(export.contains("Descricao"))
+        assertTrue(export.contains("SECAO: MECANICO"))
     }
 }

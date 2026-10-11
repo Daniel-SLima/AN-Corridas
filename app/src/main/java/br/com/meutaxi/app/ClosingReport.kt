@@ -59,9 +59,26 @@ object ClosingReport {
         return "primo-fechamento-${first.format(filenameDate)}_a_${last.format(filenameDate)}.csv"
     }
 
+    /**
+     * Spreadsheet viewers differ on CSV text encoding (especially when shared).
+     * Export ASCII transliteration only: it preserves readable Portuguese words
+     * in every legacy/UTF-8 parser. Original descriptions remain untouched in DB.
+     */
+    private fun plainCsv(value:String):String {
+        val normalized=java.text.Normalizer.normalize(value,java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+        return normalized.map { c ->
+            when {
+                c=='ç' || c=='Ç' -> 'c'
+                c.code in 32..126 -> c
+                else -> '?'
+            }
+        }.joinToString("")
+    }
+
     /** User-supplied text is escaped and cannot become a spreadsheet formula. */
     private fun escape(value:String):String {
-        val normalized=value.replace('\r',' ').replace('\n',' ').replace('\t',' ')
+        val normalized=plainCsv(value.replace('\r',' ').replace('\n',' ').replace('\t',' '))
         val first=normalized.trimStart().firstOrNull()
         val safe=if(first=='=' || first=='+' || first=='-' || first=='@') "'"+normalized else normalized
         return "\""+safe.replace("\"","\"\"")+"\""
@@ -83,8 +100,8 @@ object ClosingReport {
         val endText=endExclusive?.let {
             Instant.ofEpochMilli(it-1).atZone(ZoneId.systemDefault()).toLocalDate().format(dateFormat)
         } ?: ""
-        line("Fechamento Primo",escape(periodTitle),"Início",escape(startText),"Fim",escape(endText),"","")
-        line("Data","Hora","Categoria","Origem","Pagamento","Descrição","Ganhos (R$)","Gastos (R$)")
+        line("Fechamento Primo",escape(periodTitle),"Inicio",escape(startText),"Fim",escape(endText),"","")
+        line("Data","Hora","Categoria","Origem","Pagamento","Descricao","Ganhos (R$)","Gastos (R$)")
         line(escape("RESUMO"),"","","","","","","")
         line(escape("Corridas"),"","","",escape("${report.rides} corridas"),"",money(report.received),"")
         line(escape("Gasolina"),"","","",escape("${report.fuelCount} registros"),"","",money(report.fuel))

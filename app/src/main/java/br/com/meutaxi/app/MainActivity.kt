@@ -142,20 +142,11 @@ class MainActivity : Activity() {
     private fun add(text: String, size: Float = 16f, bold: Boolean = false): TextView =
         Ui.text(this,text,size,bold).also { content.addView(it) }
 
-    private fun simpleMode(): Boolean =
-        getSharedPreferences("primo_display",MODE_PRIVATE).getBoolean("simple_mode",true)
-
     private fun action(label: String, color: Int = Ui.BLUE, icon: String? = null, task: () -> Unit) {
         content.addView(Ui.gap(this,7))
         val button = if (icon == null) Ui.button(this,label,color)
                      else Ui.iconButton(this,label,icon,color)
         content.addView(button.apply {
-            if (tab == 0 && simpleMode() && label in setOf("Corrida","Gasolina","Mecânico")) {
-                textSize = 21f
-                minHeight = Ui.dp(this@MainActivity,69)
-                setPadding(Ui.dp(this@MainActivity,20),Ui.dp(this@MainActivity,10),
-                    Ui.dp(this@MainActivity,20),Ui.dp(this@MainActivity,10))
-            }
             setOnClickListener { Ui.tapFeedback(this); task() }
         })
     }
@@ -194,11 +185,9 @@ class MainActivity : Activity() {
         },LinearLayout.LayoutParams(Ui.dp(this,76),Ui.dp(this,76)))
         content.addView(header)
         content.addView(Ui.gap(this,10))
-        if (!simpleMode()) {
-            val greeting = Ui.text(this,"Bom dia, primo! Bora organizar as contas?",15f)
-            content.addView(greeting)
-            content.addView(Ui.gap(this,9))
-        }
+        val greeting = Ui.text(this,"Bom dia, primo! Bora organizar as contas?",15f)
+        content.addView(greeting)
+        content.addView(Ui.gap(this,9))
         val enabled = getSharedPreferences("state",MODE_PRIVATE).getBoolean("overlay_running",false)
         val canOverlay = Settings.canDrawOverlays(this)
         when {
@@ -256,10 +245,8 @@ class MainActivity : Activity() {
         action("Mecânico",Ui.DARK,"repair") { showEntryForm(EntryTypes.REPAIR) }
         showCompactGoal()
         action("Resumo do dia",Ui.BLUE,"history") { showDailySummary() }
-        if (!simpleMode()) {
-            content.addView(Ui.gap(this,12))
-            content.addView(Ui.text(this,"Histórico e metas estão no menu inferior.",14f))
-        }
+        content.addView(Ui.gap(this,12))
+        content.addView(Ui.text(this,"Histórico e metas estão no menu inferior.",14f))
         content.addView(Ui.gap(this,25))
     }
 
@@ -362,34 +349,6 @@ class MainActivity : Activity() {
         closingCard.addView(row)
         content.addView(closingCard)
         content.addView(Ui.gap(this,15))
-        val displayCard = Ui.column(this,16).apply {
-            background=Ui.rounded(Color.WHITE,this@MainActivity,17)
-        }
-        val displayRow=LinearLayout(this).apply {
-            orientation=LinearLayout.HORIZONTAL
-            gravity=Gravity.CENTER_VERTICAL
-        }
-        val labelColumn=Ui.column(this,0).apply {
-            addView(Ui.text(this@MainActivity,"Modo simples",19f,true))
-            addView(Ui.text(this@MainActivity,
-                "Botões maiores e menos mensagens na tela inicial.",13f))
-        }
-        displayRow.addView(labelColumn,LinearLayout.LayoutParams(0,-2,1f).apply {
-            rightMargin=Ui.dp(this@MainActivity,12)
-        })
-        displayRow.addView(Switch(this).apply {
-            isChecked=simpleMode()
-            contentDescription="Ativar ou desativar modo simples"
-            setOnCheckedChangeListener { _,checked ->
-                getSharedPreferences("primo_display",MODE_PRIVATE).edit()
-                    .putBoolean("simple_mode",checked).apply()
-                Toast.makeText(this@MainActivity,
-                    if(checked)"Modo simples ativado" else "Modo simples desativado",
-                    Toast.LENGTH_SHORT).show()
-            }
-        })
-        displayCard.addView(displayRow)
-        content.addView(displayCard)
         action("Desfazer último lançamento",0xFF64748B.toInt(),"history") {
             confirmUndoLastEntry()
         }

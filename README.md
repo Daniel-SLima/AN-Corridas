@@ -163,3 +163,11 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 6. Resumo do dia: verificar corridas/recebido/gastos; não deve apagar informações.
 7. Desfazer último: Cancelar, Editar e Excluir; exigir confirmação; verificar recálculo.
 8. Stress-test: histórico extenso, mudança de dia, salvar na bolinha e backup/restauração.
+
+## Primo 0.7.1 — ajustes após o teste no Samsung
+
+- Removido o **Modo simples** da tela inicial e das configurações. Restaurados os botões, espaçamentos e saudação da interface aprovada anteriormente. **Resumo do dia** e **Desfazer último lançamento** permanecem.
+- A meta dentro da bolinha foi redesenhada em duas linhas com altura 64 dp e menu com largura 266 dp; evita o corte do valor ao lado do X e preserva o reposicionamento nas bordas.
+- A compatibilidade do CSV agora prioriza leitura sem caracteres quebrados em qualquer interpretador (Google Sheets, Excel e WhatsApp): textos no arquivo são normalizados em ASCII legível, sem mudar os acentos que continuam salvos no app e no backup. Por exemplo, `Descrição` → `Descricao`, `Mecânico` → `Mecanico`, `óleo` → `oleo`. As datas, valores, categorias e nome com período não mudam.
+- Regressão automática do CSV, cálculos, escapamento de fórmulas, 1.000 registros e consistência dos resultados.
+- Mesma assinatura fixa, applicationId e dados locais. `versionCode=10`; atualização direta por cima da 0.7.0.

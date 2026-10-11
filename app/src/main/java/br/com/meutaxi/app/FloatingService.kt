@@ -225,15 +225,19 @@ class FloatingService : Service() {
         val target = if (daily) settings.dailyCents else settings.weeklyCents
         val left = GoalMath.remaining(GoalMath.received(db,start,end),target)
         val finished = left == 0L
-        return Ui.text(this,if (finished) "✓ Meta concluída" else
-            "${if (daily) "Meta diária" else "Meta semanal"}: faltam ${Money.show(left)}",13f,true).apply {
+        val label = if (daily) "Meta diária" else "Meta semanal"
+        val fullText = if (finished) "✓ Meta concluída" else "$label: faltam ${Money.show(left)}"
+        val labelText = if (finished) "✓ Meta concluída" else "$label\nFaltam ${Money.show(left)}"
+        return Ui.text(this,labelText,14f,true).apply {
             setTextColor(if (finished) Ui.GREEN else Ui.BLUE)
             gravity = Gravity.CENTER
+            maxLines = 2
+            includeFontPadding = false
             background = Ui.rounded(if (finished) 0xFFE8F8EE.toInt() else 0xFFF0F5FA.toInt(),
                 this@FloatingService,12)
-            setPadding(Ui.dp(this@FloatingService,7),Ui.dp(this@FloatingService,11),
-                Ui.dp(this@FloatingService,7),Ui.dp(this@FloatingService,11))
-            contentDescription = text
+            setPadding(Ui.dp(this@FloatingService,6),Ui.dp(this@FloatingService,6),
+                Ui.dp(this@FloatingService,6),Ui.dp(this@FloatingService,6))
+            contentDescription = fullText
         }
     }
 
@@ -266,7 +270,7 @@ class FloatingService : Service() {
             setTextColor(Ui.BLUE)
             gravity = Gravity.CENTER
         }
-        footer.addView(goal,LinearLayout.LayoutParams(0,Ui.dp(this,48),1f).apply {
+        footer.addView(goal,LinearLayout.LayoutParams(0,Ui.dp(this,64),1f).apply {
             rightMargin = Ui.dp(this@FloatingService,7)
         })
         footer.addView(TextView(this).apply {
@@ -280,9 +284,9 @@ class FloatingService : Service() {
                 Toast.makeText(this@FloatingService,"Bolinha desligada",Toast.LENGTH_SHORT).show()
                 stopSelf()
             }
-        },LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)))
+        },LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,64)))
         panel.addView(footer)
-        val boxWidth = Ui.dp(this,245)
+        val boxWidth = Ui.dp(this,266)
         val lp = params(boxWidth, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -317,9 +321,9 @@ class FloatingService : Service() {
         val anchor = bubbleParams ?: return
         val display = resources.displayMetrics
         val diameter = Ui.dp(this,58)
-        val panelWidth = Ui.dp(this,245)
+        val panelWidth = Ui.dp(this,266)
         // Use the real rendered menu height (optional goal label makes it taller).
-        val panelHeight = panel.height.takeIf { it > 0 } ?: Ui.dp(this,280)
+        val panelHeight = panel.height.takeIf { it > 0 } ?: Ui.dp(this,320)
         val gap = Ui.dp(this,10)
         val safeTop = Ui.dp(this,26)
         val safeBottom = Ui.dp(this,76)
