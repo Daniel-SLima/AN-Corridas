@@ -47,6 +47,7 @@ class FloatingService : Service() {
     private var movement: ValueAnimator? = null
     private var form: View? = null
     private lateinit var db: EntriesDb
+    private var foregroundReady=false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -62,6 +63,7 @@ class FloatingService : Service() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
+            foregroundReady=true
         } catch (e: Exception) {
             Toast.makeText(this,"Erro ao iniciar a bolinha",Toast.LENGTH_LONG).show()
             stopSelf()
@@ -69,6 +71,10 @@ class FloatingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!foregroundReady) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             stopSelf()
             return START_NOT_STICKY

@@ -353,6 +353,8 @@ class MainActivity : Activity() {
             confirmUndoLastEntry()
         }
         content.addView(Ui.gap(this,13))
+        drawPilotReadiness()
+        content.addView(Ui.gap(this,13))
         val widgetCard = Ui.column(this,16).apply {
             background = Ui.rounded(Color.WHITE,this@MainActivity,18)
         }
@@ -370,6 +372,90 @@ class MainActivity : Activity() {
         action("Importar backup",0xFF475569.toInt(),"restore") { importBackup() }
         content.addView(Ui.gap(this,18))
         add("Seus registros ficam no aparelho e funcionam sem internet. Exporte um backup regularmente.",14f)
+    }
+
+
+    /**
+     * Informational pilot controls: do not promise the Android service will be
+     * kept alive by Xiaomi/HyperOS battery management.
+     */
+    private fun drawPilotReadiness() {
+        val card=Ui.column(this,16).apply {
+            background=Ui.rounded(Color.WHITE,this@MainActivity,18)
+        }
+        card.addView(Ui.text(this,"Pronto para trabalhar",19f,true))
+        card.addView(Ui.gap(this,6))
+        val overlayAllowed=Settings.canDrawOverlays(this)
+        val requested=getSharedPreferences("state",MODE_PRIVATE)
+            .getBoolean("overlay_running",false)
+        val status=when {
+            !overlayAllowed -> "Permissão da bolinha: não autorizada"
+            requested -> "Bolinha: ativada pelo Primo (confira se aparece)"
+            else -> "Bolinha: desativada"
+        }
+        card.addView(Ui.text(this,status,14f))
+        card.addView(Ui.gap(this,8))
+        val lastBackup=getSharedPreferences("primo_pilot",MODE_PRIVATE)
+            .getLong("last_backup_at",0L)
+        val backupText=if(lastBackup<=0L) "Último backup: ainda não registrado neste aparelho"
+            else "Último backup: "+SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("pt","BR"))
+                .format(Date(lastBackup))
+        card.addView(Ui.text(this,backupText,14f))
+        card.addView(Ui.gap(this,9))
+        card.addView(Ui.iconButton(this,"Reativar bolinha","settings",Ui.YELLOW).apply {
+            setOnClickListener { reactivateBubble() }
+        })
+        card.addView(Ui.gap(this,7))
+        card.addView(Ui.iconButton(this,"Dicas para manter ativa","settings",0xFF64748B.toInt()).apply {
+            setOnClickListener { showBatteryAdvice() }
+        })
+        card.addView(Ui.gap(this,6))
+        card.addView(Ui.text(this,"Exportar backup regularmente ajuda a proteger seus registros.",12f))
+        content.addView(card)
+    }
+
+    private fun reactivateBubble() {
+        if(!Settings.canDrawOverlays(this)) {
+            AlertDialog.Builder(this).setTitle("Autorizar a bolinha")
+                .setMessage("Permita que o Primo apareça sobre outros aplicativos.")
+                .setNegativeButton("Cancelar",null)
+                .setPositiveButton("Abrir permissão") { _,_ ->
+                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")))
+                }.show()
+            return
+        }
+        try {
+            startForegroundService(Intent(this,FloatingService::class.java))
+            Toast.makeText(this,"Bolinha solicitada. Verifique se ela apareceu.",Toast.LENGTH_LONG).show()
+            // The service sets the real requested state after the overlay is added.
+            content.postDelayed({ if(!isFinishing && tab==3) draw() },550L)
+        } catch(ex:Exception) {
+            AlertDialog.Builder(this).setTitle("Não foi possível abrir a bolinha")
+                .setMessage(ex.message ?: "Abra as configurações do aplicativo e tente novamente.")
+                .setPositiveButton("OK",null).show()
+        }
+    }
+
+    private fun showBatteryAdvice() {
+        AlertDialog.Builder(this).setTitle("Bolinha durante o expediente")
+            .setMessage(
+                "Se a bolinha sumir, volte ao Primo ou toque no widget para reativá-la.\n\n"+
+                "No Xiaomi/Redmi, confira as configurações de bateria do aplicativo e "+
+                "permita a atividade em segundo plano quando essa opção existir.\n\n"+
+                "O Android ainda pode interromper serviços por segurança ou bateria. "+
+                "Não use o celular enquanto dirige."
+            )
+            .setNegativeButton("Fechar",null)
+            .setPositiveButton("Configurações do Primo") { _,_ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:$packageName")))
+                } catch(_ : Exception) {
+                    Toast.makeText(this,"Abra Configurações > Aplicativos > Primo.",
+                        Toast.LENGTH_LONG).show()
+                }
+            }.show()
     }
 
     private fun suggestWidget() {
@@ -543,8 +629,16 @@ class MainActivity : Activity() {
             "\nGastos totais: "+Money.show(day.expenses)+
             "\nSaldo parcial: "+Money.show(day.balance)+
             "\n\nEste saldo não inclui despesas não registradas."
-        AlertDialog.Builder(this).setTitle("Resumo do dia")
-            .setMessage(text).setPositiveButton("Fechar",null).show()
+        val latestToday=db.between(date.atStartMillis(),date.plusDays(1).atStartMillis())
+            .maxByOrNull { it.id }
+        val builder=AlertDialog.Builder(this).setTitle("Resumo do dia")
+            .setMessage(text).setPositiveButton("Fechar",null)
+        if(latestToday!=null) {
+            builder.setNeutralButton("Corrigir última") { _,_ ->
+                showEntryForm(latestToday.kind,latestToday)
+            }
+        }
+        builder.show()
     }
 
     /** Require confirmation to prevent accidental loss of the newest entry. */
@@ -915,6 +1009,9 @@ class MainActivity : Activity() {
                         }
                         it.write(json.toString(2))
                     } ?: error("Não foi possível escrever o arquivo")
+                    getSharedPreferences("primo_pilot",MODE_PRIVATE).edit()
+                        .putLong("last_backup_at",System.currentTimeMillis()).apply()
+                    if(tab==3) draw()
                     Toast.makeText(this,"Backup exportado!",Toast.LENGTH_LONG).show()
                 }
                 backupImportCode -> {
@@ -925,6 +1022,9 @@ class MainActivity : Activity() {
                     val restoredGoals = root.optJSONObject("goals")?.let { GoalSettings.fromJson(it) }
                     val count = db.restoreJson(json)
                     if (restoredGoals != null) goals.save(restoredGoals)
+                    // A previous export timestamp refers to a different data set.
+                    getSharedPreferences("primo_pilot",MODE_PRIVATE).edit()
+                        .remove("last_backup_at").apply()
                     draw()
                     Toast.makeText(this,"$count registros importados!",Toast.LENGTH_LONG).show()
                 }

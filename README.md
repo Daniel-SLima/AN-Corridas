@@ -2,7 +2,7 @@
 
 Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
 
-> **Status**: código-fonte da versão 0.5.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+> **Status**: código-fonte da versão 0.8.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
 
 ## Funcionalidades
 
@@ -171,3 +171,14 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 - A compatibilidade do CSV agora prioriza leitura sem caracteres quebrados em qualquer interpretador (Google Sheets, Excel e WhatsApp): textos no arquivo são normalizados em ASCII legível, sem mudar os acentos que continuam salvos no app e no backup. Por exemplo, `Descrição` → `Descricao`, `Mecânico` → `Mecanico`, `óleo` → `oleo`. As datas, valores, categorias e nome com período não mudam.
 - Regressão automática do CSV, cálculos, escapamento de fórmulas, 1.000 registros e consistência dos resultados.
 - Mesma assinatura fixa, applicationId e dados locais. `versionCode=10`; atualização direta por cima da 0.7.0.
+
+## Primo 0.8.0 — piloto de trabalho diário
+
+- A versão **0.7.1 foi aprovada em 5/5 testes manuais**. A 0.8.0 mantém o mesmo visual e funcionalidades validadas.
+- O **Resumo do dia** oferece **Corrigir última** quando há um lançamento registrado hoje. A opção abre a edição existente sem apagar nem duplicar dados.
+- Em **Mais → Pronto para trabalhar**, é possível verificar a permissão para sobreposição, conferir a última data de exportação de backup registrada pelo Primo neste aparelho e reativar manualmente a bolinha.
+- **Dicas para manter ativa** explicam como chegar às configurações do Primo no Android e orientam usuários Xiaomi/Redmi. Não há tentativa de contornar restrições do sistema nem de iniciar o serviço sozinho ao ligar o aparelho.
+- O aviso **Último backup** só atualiza após a exportação finalizar sem erro; depois de importar outra base de registros, a indicação anterior é limpa para não dar falsa segurança.
+- Serviço de bolinha agora só cria a sobreposição quando o serviço em primeiro plano foi realmente iniciado com sucesso.
+- Sem novo login, rede ou banco. Mantidos assinatura, applicationId, SQLite, backup JSON e CSV; `versionCode=11`.
+- Consulte `docs/PILOTO_PRIMO_0.8.0.md` para os testes de expediente e recuperação segura.
