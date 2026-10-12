@@ -147,7 +147,7 @@ class PrimoTour(
         val menu=LinearLayout(activity).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(9),dp(9),dp(9),dp(9))
-            background=Ui.rounded(0xFFEAF3FA.toInt(),15)
+            background=Ui.rounded(0xFFEAF3FA.toInt(),activity,15)
             elevation=dp(7).toFloat()
             visibility=if(index>=2)View.VISIBLE else View.INVISIBLE
         }
