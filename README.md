@@ -210,3 +210,12 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 5. Conferir padronização dos 6 cartões da aba Mais, as duas cores de ação e seu tamanho.
 6. Conferir Início, Histórico, Metas, Fechamento e seus cartões.
 7. Conferir backup, CSV, reativar bolinha, widget e desfazer lançamento.
+
+## Primo 1.0.0 — versão estável para entrega pessoal (12/10/2026)
+
+- Fechamento de escopo da versão aprovada na homologação manual da 0.9.1 (cinco de cinco cenários aprovados).
+- **Nenhum recurso, regra financeira, layout, fluxo de backup ou serviço foi alterado nesta versão**; release dedicada ao identificador de versão e à entrega do APK assinado.
+- Mantidos `applicationId = br.com.meutaxi.app`, banco SQLite versão 1, assinatura permanente, histórico, bolinha, metas, CSV e os dois tutoriais.
+- Versão Android `versionCode = 14` e `versionName = "1.0.0"`. **Instale por cima da 0.9.1, sem desinstalar**.
+- Para utilização no Redmi 13C: salvar backup JSON atual, instalar APK, conceder sobreposição se desejar usar a bolinha, conferir a meta e executar uma corrida fictícia de teste (depois excluí-la). Na aba Mais há os dois tutoriais.
+- A bolinha depende das permissões e restrições de bateria do Android; a versão estável não garante que o sistema nunca a encerre.
