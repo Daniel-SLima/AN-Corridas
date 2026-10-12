@@ -173,6 +173,16 @@ class MainActivity : Activity() {
         if(guideKey!=null)tourTargets[guideKey]=button
     }
 
+    private fun sectionAction(panel:LinearLayout,label:String,icon:String,
+        primary:Boolean=false,guide:String?=null,onClick:()->Unit) {
+        panel.addView(Ui.gap(this,8))
+        val control=Ui.sectionButton(this,label,icon,primary).apply {
+            setOnClickListener { Ui.tapFeedback(this); onClick() }
+        }
+        panel.addView(control,LinearLayout.LayoutParams(-1,Ui.dp(this,52)))
+        if(guide!=null)tourTargets[guide]=control
+    }
+
     private fun draw() {
         tourTargets.clear()
         content.removeAllViews()
@@ -306,7 +316,7 @@ class MainActivity : Activity() {
         val entries = db.between(start,end)
         content.addView(Ui.gap(this,15))
         if (entries.isEmpty()) {
-            val empty = Ui.column(this,16).apply { background = Ui.rounded(Color.WHITE,this@MainActivity) }
+            val empty = Ui.panel(this,16)
             empty.addView(Ui.text(this,"Ainda não há lançamentos neste período.",16f))
             content.addView(empty)
         } else entries.forEach { entryRow(it) }
@@ -326,133 +336,130 @@ class MainActivity : Activity() {
         content.addView(Ui.gap(this,6))
         add("Configurações e segurança dos seus dados.",14f)
         content.addView(Ui.gap(this,17))
+
         val (startReport,endReport,titleReport)=range()
-        val todayReport=ClosingReport.calculate(db.between(startReport,endReport))
-        val closingCard=Ui.column(this,14).apply {
-            background=Ui.rounded(Color.WHITE,this@MainActivity,17)
-        }
-        closingCard.addView(Ui.text(this,"Fechamento financeiro",21f,true))
-        closingCard.addView(Ui.gap(this,5))
-        val info="Período: "+titleReport+" • "+todayReport.rides+" corridas • "+
-            Money.show(todayReport.received)+" recebidos"
-        closingCard.addView(Ui.text(this,info,14f))
-        closingCard.addView(Ui.gap(this,13))
+        val report=ClosingReport.calculate(db.between(startReport,endReport))
+        val closing=Ui.panel(this)
+        closing.addView(Ui.sectionTitle(this,"Fechamento financeiro"))
+        closing.addView(Ui.gap(this,5))
+        closing.addView(Ui.text(this,"Período: "+titleReport+" • "+report.rides+
+            " corridas • "+Money.show(report.received)+" recebidos",14f))
+        closing.addView(Ui.gap(this,13))
         val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         listOf(Triple("Ver","eye",0),Triple("Baixar","download",1),
-            Triple("Compartilhar","share",2)).forEachIndexed { i,(label,ico,index) ->
+            Triple("Compartilhar","share",2)).forEachIndexed { i,(label,icon,task) ->
             val tile=LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL
                 gravity=Gravity.CENTER
-                background=Ui.rounded(if(i==0) 0xFFFFF4C1.toInt() else 0xFFEAF3FA.toInt(),
-                    this@MainActivity,13)
+                background=Ui.rounded(if(i==0)0xFFFFF4C1.toInt() else
+                    0xFFEAF3FA.toInt(),this@MainActivity,13)
                 contentDescription=label+" fechamento"
                 isFocusable=true
                 setOnClickListener {
                     Ui.tapFeedback(this)
-                    when(index) {
-                        0 -> { tab=4; draw(); scroller.scrollTo(0,0) }
+                    when(task) {
+                        0 -> {tab=4;draw();scroller.scrollTo(0,0)}
                         1 -> downloadClosingCsv()
                         else -> shareClosingCsv()
                     }
                 }
             }
             tile.addView(ImageView(this).apply {
-                setImageDrawable(primoIcon(this@MainActivity,ico,Ui.BLUE,24))
-            },LinearLayout.LayoutParams(Ui.dp(this,24),Ui.dp(this,24)))
+                setImageDrawable(primoIcon(this@MainActivity,icon,Ui.BLUE,23))
+                contentDescription=null
+            },LinearLayout.LayoutParams(Ui.dp(this,23),Ui.dp(this,23)))
             tile.addView(Ui.gap(this,5))
             tile.addView(Ui.text(this,label,13f,true).apply {
-                gravity=Gravity.CENTER
-                setTextColor(Ui.BLUE)
-                maxLines=1
+                gravity=Gravity.CENTER;setTextColor(Ui.BLUE);maxLines=1
             })
             row.addView(tile,LinearLayout.LayoutParams(0,Ui.dp(this,78),1f).apply {
-                if(i>0) leftMargin=Ui.dp(this@MainActivity,6)
+                if(i>0)leftMargin=Ui.dp(this@MainActivity,6)
             })
         }
-        closingCard.addView(row)
-        content.addView(closingCard)
-        tourTargets["more.closing"]=closingCard
-        content.addView(Ui.gap(this,15))
-        action("Desfazer último lançamento",0xFF64748B.toInt(),"history") {
-            confirmUndoLastEntry()
-        }
-        content.addView(Ui.gap(this,13))
-        drawPilotReadiness()
-        content.addView(Ui.gap(this,13))
-        val widgetCard = Ui.column(this,16).apply {
-            background = Ui.rounded(Color.WHITE,this@MainActivity,18)
-        }
-        widgetCard.addView(Ui.text(this,"Primo na tela inicial",19f,true))
-        widgetCard.addView(Ui.gap(this,6))
-        widgetCard.addView(Ui.text(this,
-            "Abra a bolinha com um toque, sem precisar entrar no aplicativo.",14f))
-        widgetCard.addView(Ui.gap(this,10))
-        widgetCard.addView(Ui.iconButton(this,"Adicionar widget","home",Ui.YELLOW).apply {
-            setOnClickListener { suggestWidget() }
-        })
-        content.addView(widgetCard)
-        action("Configurar metas e mensagens",Ui.BLUE,"settings") { showGoalsDialog() }
-        content.addView(Ui.gap(this,7))
-        val learning=Ui.column(this,14).apply {
-            background=Ui.rounded(0xFFFFF6D8.toInt(),this@MainActivity,17)
-        }
-        learning.addView(Ui.text(this,"Aprenda com o Primo",19f,true))
-        learning.addView(Ui.gap(this,5))
-        learning.addView(Ui.text(this,
-            "O mascote mostra onde tocar. Pode repetir quantas vezes quiser.",14f))
-        learning.addView(Ui.gap(this,10))
-        learning.addView(Ui.iconButton(this,"Tutorial do aplicativo","home",Ui.BLUE).apply {
-            setOnClickListener { startPrimoTour(PrimoTour.Kind.APP) }
-        })
-        learning.addView(Ui.gap(this,7))
-        learning.addView(Ui.iconButton(this,"Tutorial da bolinha","target",Ui.YELLOW).apply {
-            setOnClickListener { startPrimoTour(PrimoTour.Kind.BUBBLE) }
-        })
-        content.addView(learning)
-        action("Exportar backup",0xFF475569.toInt(),"backup") { exportBackup() }
-        action("Importar backup",0xFF475569.toInt(),"restore") { importBackup() }
-        content.addView(Ui.gap(this,18))
-        add("Seus registros ficam no aparelho e funcionam sem internet. Exporte um backup regularmente.",14f)
-    }
+        closing.addView(row)
+        content.addView(closing)
+        tourTargets["more.closing"]=closing
+        content.addView(Ui.gap(this,12))
 
+        val correct=Ui.panel(this)
+        correct.addView(Ui.sectionTitle(this,"Corrigir registros"))
+        correct.addView(Ui.gap(this,5))
+        correct.addView(Ui.text(this,
+            "Para corrigir valores, use o Histórico ou confira o último lançamento.",14f))
+        sectionAction(correct,"Desfazer último lançamento","history") { confirmUndoLastEntry() }
+        content.addView(correct)
+        content.addView(Ui.gap(this,12))
+
+        drawPilotReadiness()
+        content.addView(Ui.gap(this,12))
+
+        val metas=Ui.panel(this)
+        metas.addView(Ui.sectionTitle(this,"Metas e preferências"))
+        metas.addView(Ui.gap(this,5))
+        metas.addView(Ui.text(this,
+            "Escolha a meta do dia ou da semana.",14f))
+        sectionAction(metas,"Configurar metas","target") { showGoalsDialog() }
+        content.addView(metas)
+        content.addView(Ui.gap(this,12))
+
+        val learn=Ui.panel(this)
+        learn.addView(Ui.sectionTitle(this,"Aprenda com o Primo"))
+        learn.addView(Ui.gap(this,5))
+        learn.addView(Ui.text(this,
+            "O mascote explica os botões. Reveja quando quiser.",14f))
+        sectionAction(learn,"Tutorial do aplicativo","home",true) {
+            startPrimoTour(PrimoTour.Kind.APP)
+        }
+        sectionAction(learn,"Tutorial da bolinha","target") {
+            startPrimoTour(PrimoTour.Kind.BUBBLE)
+        }
+        content.addView(learn)
+        content.addView(Ui.gap(this,12))
+
+        val safety=Ui.panel(this)
+        safety.addView(Ui.sectionTitle(this,"Segurança dos dados"))
+        safety.addView(Ui.gap(this,5))
+        val last=getSharedPreferences("primo_pilot",MODE_PRIVATE)
+            .getLong("last_backup_at",0L)
+        val lastText=if(last<=0L) "Último backup: ainda não registrado neste aparelho"
+            else "Último backup: "+SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("pt","BR"))
+                .format(Date(last))
+        safety.addView(Ui.text(this,lastText,14f))
+        safety.addView(Ui.gap(this,4))
+        safety.addView(Ui.text(this,
+            "Seus registros ficam neste aparelho e funcionam sem internet.",13f))
+        sectionAction(safety,"Exportar backup","backup",true,"more.backup") {
+            exportBackup()
+        }
+        sectionAction(safety,"Importar backup","restore") { importBackup() }
+        content.addView(safety)
+        content.addView(Ui.gap(this,22))
+    }
 
     /**
      * Informational pilot controls: do not promise the Android service will be
      * kept alive by Xiaomi/HyperOS battery management.
      */
     private fun drawPilotReadiness() {
-        val card=Ui.column(this,16).apply {
-            background=Ui.rounded(Color.WHITE,this@MainActivity,18)
-        }
-        card.addView(Ui.text(this,"Pronto para trabalhar",19f,true))
-        card.addView(Ui.gap(this,6))
-        val overlayAllowed=Settings.canDrawOverlays(this)
+        val panel=Ui.panel(this)
+        panel.addView(Ui.sectionTitle(this,"Bolinha e tela inicial"))
+        panel.addView(Ui.gap(this,5))
+        val allowed=Settings.canDrawOverlays(this)
         val requested=getSharedPreferences("state",MODE_PRIVATE)
             .getBoolean("overlay_running",false)
         val status=when {
-            !overlayAllowed -> "Permissão da bolinha: não autorizada"
-            requested -> "Bolinha: ativada pelo Primo (confira se aparece)"
+            !allowed -> "Bolinha: permissão não autorizada"
+            requested -> "Bolinha: ativada (confira se aparece)"
             else -> "Bolinha: desativada"
         }
-        card.addView(Ui.text(this,status,14f))
-        card.addView(Ui.gap(this,8))
-        val lastBackup=getSharedPreferences("primo_pilot",MODE_PRIVATE)
-            .getLong("last_backup_at",0L)
-        val backupText=if(lastBackup<=0L) "Último backup: ainda não registrado neste aparelho"
-            else "Último backup: "+SimpleDateFormat("dd/MM/yyyy HH:mm",Locale("pt","BR"))
-                .format(Date(lastBackup))
-        card.addView(Ui.text(this,backupText,14f))
-        card.addView(Ui.gap(this,9))
-        card.addView(Ui.iconButton(this,"Reativar bolinha","settings",Ui.YELLOW).apply {
-            setOnClickListener { reactivateBubble() }
-        })
-        card.addView(Ui.gap(this,7))
-        card.addView(Ui.iconButton(this,"Dicas para manter ativa","settings",0xFF64748B.toInt()).apply {
-            setOnClickListener { showBatteryAdvice() }
-        })
-        card.addView(Ui.gap(this,6))
-        card.addView(Ui.text(this,"Exportar backup regularmente ajuda a proteger seus registros.",12f))
-        content.addView(card)
+        panel.addView(Ui.text(this,status,14f))
+        panel.addView(Ui.gap(this,4))
+        panel.addView(Ui.text(this,
+            "Registre rapidamente usando o + amarelo.",13f))
+        sectionAction(panel,"Reativar bolinha","settings",true) { reactivateBubble() }
+        sectionAction(panel,"Dicas sobre bateria","settings") { showBatteryAdvice() }
+        sectionAction(panel,"Adicionar widget","home") { suggestWidget() }
+        content.addView(panel)
     }
 
     private fun reactivateBubble() {
@@ -597,9 +604,7 @@ class MainActivity : Activity() {
         content.addView(Ui.gap(this,6))
         add("Saldo parcial = corridas − gastos registrados. Não é lucro líquido.",12f)
         content.addView(Ui.gap(this,6))
-        val totalCard = Ui.column(this,13).apply {
-            background = Ui.rounded(0xFFEAF3FA.toInt(),this@MainActivity,16)
-        }
+        val totalCard = Ui.panel(this,13)
         totalCard.addView(Ui.text(this,"RESUMO DO PERÍODO",13f,true))
         totalCard.addView(Ui.text(this,
             "${report.rides} corridas • gasolina: ${Money.show(report.fuel)} • mecânico: ${Money.show(report.repair)}",14f))
@@ -625,9 +630,7 @@ class MainActivity : Activity() {
         content.addView(Ui.gap(this,17))
         add(title,20f,true)
         content.addView(Ui.gap(this,8))
-        val section = Ui.column(this,14).apply {
-            background = Ui.rounded(Color.WHITE,this@MainActivity,15)
-        }
+        val section = Ui.panel(this,14)
         if (rows.isEmpty()) {
             section.addView(Ui.text(this,"Nenhum registro no período.",14f))
         } else rows.forEachIndexed { index, item ->
@@ -757,8 +760,7 @@ class MainActivity : Activity() {
         val goalEnd = if (isDaily) today.plusDays(1) else goalStart.plusDays(7)
         val target = if (isDaily) settings.dailyCents else settings.weeklyCents
         val remaining = GoalMath.remaining(GoalMath.received(db,goalStart,goalEnd),target)
-        val block = Ui.column(this,13).apply {
-            background = Ui.rounded(Color.WHITE,this@MainActivity,16)
+        val block = Ui.panel(this,13).apply {
             setOnClickListener { tab = 2; draw(); scroller.scrollTo(0,0) }
         }
         content.addView(Ui.gap(this,11))
@@ -855,7 +857,7 @@ class MainActivity : Activity() {
 
     private fun goalCard(title: String, target: Long, received: Long) {
         content.addView(Ui.gap(this,9))
-        val block = Ui.column(this,14).apply { background = Ui.rounded(Color.WHITE,this@MainActivity) }
+        val block = Ui.panel(this,14)
         val percentage = if (target > 0) (received.toDouble()/target*100).toInt() else 0
         block.addView(Ui.text(this,"$title • ${Money.show(target)}",16f,true))
         block.addView(Ui.text(this,"Recebido: ${Money.show(received)}  •  $percentage%",15f))
@@ -944,7 +946,7 @@ class MainActivity : Activity() {
     }
 
     private fun card(label: String, amount: String, foot: String, color: Int) {
-        val card = Ui.column(this,14).apply { background = Ui.rounded(Color.WHITE,this@MainActivity) }
+        val card = Ui.panel(this,14)
         card.addView(Ui.text(this,label,13f,true))
         card.addView(Ui.gap(this,5))
         card.addView(Ui.text(this,amount,27f,true).apply { setTextColor(color) })
@@ -953,7 +955,7 @@ class MainActivity : Activity() {
     }
 
     private fun entryRow(e: Entry) {
-        val card = Ui.column(this,12).apply { background = Ui.rounded(Color.WHITE,this@MainActivity) }
+        val card = Ui.panel(this,12)
         val label = EntryTypes.name(e.kind) + if (e.kind == EntryTypes.RIDE) " • ${e.source} • ${e.payment}" else ""
         val kindIcon = when (e.kind) {
             EntryTypes.RIDE -> "ride"

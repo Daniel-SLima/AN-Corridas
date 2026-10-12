@@ -36,6 +36,33 @@ object Ui {
         setPadding(dp(context,pad),dp(context,pad),dp(context,pad),dp(context,pad))
     }
 
+    /** Reusable components for a consistent Primo interface. */
+    fun panel(context:Context,pad:Int=16):LinearLayout =
+        column(context,pad).apply {
+            background=rounded(Color.WHITE,context,18).apply {
+                setStroke(dp(context,1),0xFFE5ECF3.toInt())
+            }
+        }
+
+    fun sectionTitle(context:Context,title:String):TextView =
+        text(context,title,19f,true)
+
+    fun sectionButton(context:Context,label:String,icon:String,
+        primary:Boolean=false):Button {
+        val control=iconButton(context,label,icon,BLUE)
+        control.textSize=15f
+        control.minHeight=dp(context,52)
+        if(!primary) {
+            control.background=rounded(0xFFEAF3FA.toInt(),context,13).apply {
+                setStroke(dp(context,1),0xFFDAE7F1.toInt())
+            }
+            control.setTextColor(BLUE)
+            control.setCompoundDrawablesWithIntrinsicBounds(
+                primoIcon(context,icon,BLUE,22),null,null,null)
+        }
+        return control
+    }
+
     fun text(context: Context, content: String, size: Float = 17f, bold: Boolean = false): TextView =
         TextView(context).apply {
             text = content

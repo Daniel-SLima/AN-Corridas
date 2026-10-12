@@ -2,7 +2,7 @@
 
 Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
 
-> **Status**: código-fonte da versão 0.9.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+> **Status**: código-fonte da versão 0.9.1. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
 
 ## Funcionalidades
 
@@ -192,3 +192,21 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 - **Mais → Aprenda com o Primo** permite rever cada tutorial separadamente.
 - Durante o tutorial, tocar na área iluminada **não executa** os botões reais: navega apenas entre etapas, evitando importação de backup, alterações de metas e novos registros.
 - Mesmo applicationId, SQLite, CSV, widget e assinatura permanente; `versionCode=12` permite atualizar a 0.8.0 diretamente.
+
+## Primo 0.9.1 — acabamento visual e tutorial
+
+- Corrigido o possível brilho branco temporário no canto superior esquerdo ao pressionar **Próximo**: o cartão do tutorial fica invisível até concluir a medição e o posicionamento, e o foco anterior é limpo imediatamente.
+- O recorte do spotlight agora é limitado ao retângulo **realmente visível** do alvo (respeitando rolagem, recorte do ScrollView e margens da tela), evitando recortes fora da área.
+- Criados componentes reutilizáveis `Ui.panel`, `Ui.sectionTitle` e `Ui.sectionButton` para padronizar superfícies, bordas, cantos, textos e altura dos botões.
+- A aba **Mais** passa a exibir grupos consistentes: **Fechamento financeiro**, **Corrigir registros**, **Bolinha e tela inicial**, **Metas e preferências**, **Aprenda com o Primo** e **Segurança dos dados**. Botões em azul preenchido para ação principal e azul-claro para ação secundária.
+- Cartões regulares de Início, Histórico, Metas e Fechamento reutilizam o mesmo estilo de painel neutro. Botões coloridos de Corrida/Gasolina/Mecânico e a identidade azul/amarela são mantidos.
+- Não alterados SQLite, dados, formato CSV, exportação/restore, assinatura, serviços, widget nem configuração das metas. `versionCode=13` para instalar por cima da 0.9.0.
+
+### Verificações de aceitação
+1. Atualizar por cima da 0.9.0 sem desinstalar e conferir entradas e metas.
+2. Abrir tutorial do aplicativo pelo menu Mais e avançar repetidamente: **nenhum brilho branco** no canto superior esquerdo.
+3. Testar Voltar/Próximo/Pular, destaque das metas e do botão Backup com a tela rolando; verificar que o alvo visível não fica cortado.
+4. Rever tutorial da bolinha e arrastar + fictício. Nenhuma corrida é criada.
+5. Conferir padronização dos 6 cartões da aba Mais, as duas cores de ação e seu tamanho.
+6. Conferir Início, Histórico, Metas, Fechamento e seus cartões.
+7. Conferir backup, CSV, reativar bolinha, widget e desfazer lançamento.

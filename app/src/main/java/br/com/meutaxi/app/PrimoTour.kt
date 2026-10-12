@@ -86,6 +86,11 @@ class PrimoTour(
             mock=null
             goToTab(s.tab)
         } else addMock()
+        // Avoid a one-frame white flash at (0,0) while the next card is measured.
+        shade.hole=null
+        shade.invalidate()
+        focus=null
+        card.visibility=View.INVISIBLE
         card.removeAllViews()
         (card.parent as? ViewGroup)?.removeView(card)
         card.orientation=LinearLayout.VERTICAL
@@ -216,12 +221,21 @@ class PrimoTour(
         overlay.post {
             if(closed)return@post
             val v=findTarget()
+            // getGlobalVisibleRect accounts for clipping inside ScrollView.
+            // Never highlight an element that is off-screen or detached.
             focus=if(v!=null && v.isShown && v.width>0 && v.height>0) {
-                val pos=IntArray(2);val parent=IntArray(2)
-                v.getLocationOnScreen(pos);overlay.getLocationOnScreen(parent)
-                RectF((pos[0]-parent[0]-dp(5)).toFloat(),(pos[1]-parent[1]-dp(5)).toFloat(),
-                    (pos[0]-parent[0]+v.width+dp(5)).toFloat(),
-                    (pos[1]-parent[1]+v.height+dp(5)).toFloat())
+                val visible=Rect()
+                val origin=IntArray(2)
+                overlay.getLocationOnScreen(origin)
+                if(v.getGlobalVisibleRect(visible)) {
+                    val left=(visible.left-origin[0]-dp(5)).coerceIn(0,overlay.width)
+                    val top=(visible.top-origin[1]-dp(5)).coerceIn(0,overlay.height)
+                    val right=(visible.right-origin[0]+dp(5)).coerceIn(0,overlay.width)
+                    val bottom=(visible.bottom-origin[1]+dp(5)).coerceIn(0,overlay.height)
+                    if(right-left>=dp(10) && bottom-top>=dp(10))
+                        RectF(left.toFloat(),top.toFloat(),right.toFloat(),bottom.toFloat())
+                    else null
+                } else null
             } else null
             shade.hole=focus;shade.invalidate()
             val width=(overlay.width-dp(24)).coerceAtMost(dp(390))
@@ -240,6 +254,8 @@ class PrimoTour(
             card.layoutParams=FrameLayout.LayoutParams(width,-2,
                 Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin=top }
             card.bringToFront()
+            // Only reveal the card after its intended screen position is known.
+            card.visibility=View.VISIBLE
         }
     }
     private fun move(delta:Int) {
