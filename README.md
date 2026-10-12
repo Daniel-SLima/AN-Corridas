@@ -2,7 +2,7 @@
 
 Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
 
-> **Status**: código-fonte da versão 0.8.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+> **Status**: código-fonte da versão 0.9.0. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
 
 ## Funcionalidades
 
@@ -182,3 +182,13 @@ A compilação automática é um teste técnico do código. A compatibilidade es
 - Serviço de bolinha agora só cria a sobreposição quando o serviço em primeiro plano foi realmente iniciado com sucesso.
 - Sem novo login, rede ou banco. Mantidos assinatura, applicationId, SQLite, backup JSON e CSV; `versionCode=11`.
 - Consulte `docs/PILOTO_PRIMO_0.8.0.md` para os testes de expediente e recuperação segura.
+
+## Primo 0.9.0 — Tutoriais guiados com o mascote
+
+- **Primeira abertura após atualizar**: apresenta um convite opcional para conhecer o Primo; não bloqueia o aplicativo e não reaparece automaticamente depois de responder.
+- **Tutorial do app**: 11 etapas (boas-vindas, Corrida, Gasolina, Mecânico, Metas, Editar meta, Histórico, Mais, Fechamento, Backup e conclusão). Escurece a tela, destaca controles reais e avança por toque no destaque ou por Próximo.
+- **Tutorial da bolinha**: 6 etapas com bolinha **simulada**, incluindo +, menu, meta, X e movimento. Não pede permissão de sobreposição e nunca salva lançamentos.
+- O mascote original aparece como avatar circular, com mini expressões, balões de conversa e botões **Voltar, Pular, Próximo e Concluir**.
+- **Mais → Aprenda com o Primo** permite rever cada tutorial separadamente.
+- Durante o tutorial, tocar na área iluminada **não executa** os botões reais: navega apenas entre etapas, evitando importação de backup, alterações de metas e novos registros.
+- Mesmo applicationId, SQLite, CSV, widget e assinatura permanente; `versionCode=12` permite atualizar a 0.8.0 diretamente.

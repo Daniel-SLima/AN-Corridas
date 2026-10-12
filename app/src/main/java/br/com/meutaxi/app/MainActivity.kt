@@ -55,6 +55,9 @@ class MainActivity : Activity() {
     private val csvExportCode = 503
     private data class ExportSelection(val start:Long,val end:Long,val title:String)
     private var exportSelection: ExportSelection? = null
+    private val tourTargets = mutableMapOf<String,View>()
+    private var tutorial: PrimoTour? = null
+    private val tutorialPrefs by lazy { getSharedPreferences("primo_tutorial",MODE_PRIVATE) }
     private val midnightHandler = Handler(Looper.getMainLooper())
     private val midnightRefresh = object:Runnable {
         override fun run() {
@@ -110,6 +113,17 @@ class MainActivity : Activity() {
         root.addView(navigation,LinearLayout.LayoutParams(-1,Ui.dp(this,71)))
         setContentView(root)
         draw()
+        // Ask once only; the tutorial itself never touches database or goals.
+        content.post {
+            if (!isFinishing && !tutorialPrefs.getBoolean("first_prompt_09",false)) {
+                tutorialPrefs.edit().putBoolean("first_prompt_09",true).apply()
+                AlertDialog.Builder(this)
+                    .setTitle("Conheça o Primo!")
+                    .setMessage("O Primo te mostra os botões com um brilho na tela. Quer aprender agora? Não vamos salvar nenhum dado durante o guia.")
+                    .setPositiveButton("Começar") { _,_ -> startPrimoTour(PrimoTour.Kind.APP) }
+                    .setNegativeButton("Agora não",null).show()
+            }
+        }
     }
 
     override fun onResume() {
@@ -149,9 +163,18 @@ class MainActivity : Activity() {
         content.addView(button.apply {
             setOnClickListener { Ui.tapFeedback(this); task() }
         })
+        val guideKey = when(label) {
+            "Corrida" -> "home.ride"
+            "Gasolina" -> "home.fuel"
+            "Mecânico" -> "home.repair"
+            "Exportar backup" -> "more.backup"
+            else -> null
+        }
+        if(guideKey!=null)tourTargets[guideKey]=button
     }
 
     private fun draw() {
+        tourTargets.clear()
         content.removeAllViews()
         when (tab) {
             1 -> drawHistoryPage()
@@ -348,6 +371,7 @@ class MainActivity : Activity() {
         }
         closingCard.addView(row)
         content.addView(closingCard)
+        tourTargets["more.closing"]=closingCard
         content.addView(Ui.gap(this,15))
         action("Desfazer último lançamento",0xFF64748B.toInt(),"history") {
             confirmUndoLastEntry()
@@ -368,6 +392,23 @@ class MainActivity : Activity() {
         })
         content.addView(widgetCard)
         action("Configurar metas e mensagens",Ui.BLUE,"settings") { showGoalsDialog() }
+        content.addView(Ui.gap(this,7))
+        val learning=Ui.column(this,14).apply {
+            background=Ui.rounded(0xFFFFF6D8.toInt(),this@MainActivity,17)
+        }
+        learning.addView(Ui.text(this,"Aprenda com o Primo",19f,true))
+        learning.addView(Ui.gap(this,5))
+        learning.addView(Ui.text(this,
+            "O mascote mostra onde tocar. Pode repetir quantas vezes quiser.",14f))
+        learning.addView(Ui.gap(this,10))
+        learning.addView(Ui.iconButton(this,"Tutorial do aplicativo","home",Ui.BLUE).apply {
+            setOnClickListener { startPrimoTour(PrimoTour.Kind.APP) }
+        })
+        learning.addView(Ui.gap(this,7))
+        learning.addView(Ui.iconButton(this,"Tutorial da bolinha","target",Ui.YELLOW).apply {
+            setOnClickListener { startPrimoTour(PrimoTour.Kind.BUBBLE) }
+        })
+        content.addView(learning)
         action("Exportar backup",0xFF475569.toInt(),"backup") { exportBackup() }
         action("Importar backup",0xFF475569.toInt(),"restore") { importBackup() }
         content.addView(Ui.gap(this,18))
@@ -456,6 +497,48 @@ class MainActivity : Activity() {
                         Toast.LENGTH_LONG).show()
                 }
             }.show()
+    }
+
+
+    private fun startPrimoTour(mode: PrimoTour.Kind) {
+        tutorial?.dismiss()
+        // The bubble lesson is a mock, not the actual SYSTEM_ALERT_WINDOW overlay.
+        if(mode==PrimoTour.Kind.APP && tab!=0) {
+            tab=0; draw(); scroller.scrollTo(0,0)
+        }
+        val tour=PrimoTour(this,mode,
+            target={ key -> tourTargets[key] },
+            goToTab={ dest ->
+                if(tab!=dest) {
+                    tab=dest
+                    draw()
+                    scroller.scrollTo(0,0)
+                }
+            },
+            onFinish={ finishedMode,completed ->
+                tutorial=null
+                if(completed && finishedMode==PrimoTour.Kind.APP && !isFinishing) {
+                    AlertDialog.Builder(this)
+                        .setTitle("Quer conhecer a bolinha?")
+                        .setMessage("O Primo também tem um tutorial separado para o botão + flutuante. É só uma demonstração, sem salvar nada.")
+                        .setNegativeButton("Depois",null)
+                        .setPositiveButton("Quero ver") { _,_ ->
+                            startPrimoTour(PrimoTour.Kind.BUBBLE)
+                        }.show()
+                }
+            }
+        )
+        tutorial=tour
+        tour.start()
+    }
+
+    @Deprecated("Handled to safely exit the tutorial before navigating back")
+    override fun onBackPressed() {
+        val guide=tutorial
+        if(guide!=null) {
+            guide.dismiss()
+            tutorial=null
+        } else super.onBackPressed()
     }
 
     private fun suggestWidget() {
@@ -723,6 +806,12 @@ class MainActivity : Activity() {
             navigation.addView(item,LinearLayout.LayoutParams(0,-1,1f).apply {
                 setMargins(Ui.dp(this@MainActivity,2),0,Ui.dp(this@MainActivity,2),0)
             })
+            tourTargets["nav."+when(index) {
+                0 -> "home"
+                1 -> "history"
+                2 -> "goals"
+                else -> "more"
+            }]=item
         }
     }
 
@@ -740,10 +829,12 @@ class MainActivity : Activity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         row.addView(Ui.text(this,"Acompanhar metas",20f,true),
             LinearLayout.LayoutParams(0,-2,1f))
-        row.addView(Ui.button(this,"Editar",Ui.BLUE).apply {
-            textSize = 13f
+        val editGoal = Ui.button(this,"Editar",Ui.BLUE).apply {
+            textSize=13f
             setOnClickListener { showGoalsDialog() }
-        },LinearLayout.LayoutParams(Ui.dp(this,85),Ui.dp(this,43)))
+        }
+        tourTargets["goals.edit"]=editGoal
+        row.addView(editGoal,LinearLayout.LayoutParams(Ui.dp(this,85),Ui.dp(this,43)))
         content.addView(row)
         if (!settings.dailyEnabled && !settings.weeklyEnabled) {
             content.addView(Ui.gap(this,8))
