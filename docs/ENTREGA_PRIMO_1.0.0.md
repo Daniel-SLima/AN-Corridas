@@ -2,7 +2,7 @@
 
 ## Instalar
 
-1. Envie o arquivo `Primo_v1.0.0_release.apk` para o celular Android.
+1. [Baixe o APK oficial Primo 1.0.0](https://github.com/Daniel-SLima/Primo-Android/releases/download/v1.0.0/Primo_v1.0.0_release.apk) no celular Android, ou baixe no computador e envie o arquivo `Primo_v1.0.0_release.apk` ao aparelho.
 2. Abra o arquivo pelo gerenciador de arquivos e permita, se necessário, a instalação de aplicativos dessa origem.
 3. Caso já tenha Primo, **instale por cima**. Não desinstale a versão anterior, pois isso pode apagar os registros.
 4. Abra o Primo e confira se os registros anteriores e as metas permanecem.

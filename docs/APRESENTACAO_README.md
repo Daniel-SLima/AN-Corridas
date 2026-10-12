@@ -34,6 +34,10 @@ O README diferencia seleção manual de origem de integração com plataformas, 
 
 A consulta à API do GitHub confirmou ausência de releases e de licença definida. Havia artefatos `Primo-APK-Release` disponíveis. A seção de instalação aponta para o workflow existente e informa retenção de 14 dias; não foi criado link direto para um APK inexistente.
 
+### Atualização: APK pronto para download
+
+Após a publicação do README, o proprietário solicitou disponibilizar um APK pronto para download. A Release `v1.0.0` passa a distribuir `Primo_v1.0.0_release.apk`, gerado pelo workflow oficial e verificado localmente com `apksigner` e `aapt`. O README recebeu links de download direto no cabeçalho e na instalação; o guia técnico e o guia de entrega foram atualizados. O procedimento por Actions descrito acima registra a entrega inicial. O download público pela Release dispensa compilação e não depende da retenção de artefatos. A licença permanece sem definição.
+
 ## Verificação realizada
 
 - Renderização pela API oficial de Markdown do GitHub, no modo GFM, confirmando manutenção das galerias e dos atributos de imagem pelo sanitizador.

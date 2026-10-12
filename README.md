@@ -7,6 +7,11 @@
 <p align="center">Um jeito simples de registrar corridas, acompanhar ganhos e controlar gastos, sem complicação.</p>
 
 <p align="center">
+  <strong><a href="https://github.com/Daniel-SLima/Primo-Android/releases/download/v1.0.0/Primo_v1.0.0_release.apk">Baixar APK — Primo 1.0.0</a></strong><br>
+  Android 8.0 ou superior · Arquivo pronto para instalar
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Android-8%2B-0B4F8A" alt="Android 8 ou superior">
   <img src="https://img.shields.io/badge/Kotlin-nativo-0B4F8A" alt="Desenvolvido em Kotlin para Android nativo">
   <img src="https://img.shields.io/badge/Offline-sem%20login-FFC928?labelColor=0B4F8A" alt="Offline e sem login">
@@ -93,15 +98,16 @@ O Primo utiliza SQLite local, sem servidor, anúncios ou rastreadores. Não exig
 
 ## Instalação
 
-O Primo é instalado por **APK** em aparelhos com **Android 8.0 ou superior**. Atualmente, a distribuição é feita pelo GitHub Actions; não há GitHub Release publicada com o APK.
+O Primo é instalado por **APK** em aparelhos com **Android 8.0 ou superior**. O arquivo oficial já está gerado e assinado: basta baixar e instalar.
 
-1. Abra [Actions → Gerar APK Android assinado](https://github.com/Daniel-SLima/Primo-Android/actions/workflows/android-apk.yml).
-2. Escolha uma execução bem-sucedida da versão desejada e abra os **Artifacts** do job `build`.
-3. Baixe **Primo-APK-Release** e extraia o ZIP para obter `app-release.apk`. O download de artefatos pelo GitHub exige uma sessão autenticada.
-4. Transfira o APK para o aparelho, abra-o e permita a instalação dessa origem se o Android solicitar.
-5. Se já utiliza o Primo, faça um backup e **instale por cima**, preservando os registros e as metas.
+**[Baixar Primo 1.0.0 (.apk)](https://github.com/Daniel-SLima/Primo-Android/releases/download/v1.0.0/Primo_v1.0.0_release.apk)** · [Ver a Release e os detalhes do arquivo](https://github.com/Daniel-SLima/Primo-Android/releases/tag/v1.0.0)
 
-Os artefatos têm **retenção de 14 dias**. Se o arquivo expirou, o responsável pelo repositório pode executar o workflow novamente com os secrets de assinatura configurados. O processo exige a chave permanente e verifica o certificado do APK.
+1. Toque em **Baixar Primo 1.0.0** no celular, ou baixe no computador e transfira o APK para o aparelho.
+2. Abra `Primo_v1.0.0_release.apk` e permita a instalação dessa origem se o Android solicitar.
+3. Se já utiliza o Primo, faça um backup e **instale por cima**, preservando os registros e as metas.
+4. Abra o app e siga o tutorial, se desejar.
+
+O download é público, não exige conta no GitHub nem compilação e não está sujeito à retenção de 14 dias dos artefatos do Actions. A Release contém o APK com a assinatura permanente do Primo.
 
 Consulte o [guia de entrega e verificação no aparelho](docs/ENTREGA_PRIMO_1.0.0.md) para conferir a instalação e o primeiro uso.
 

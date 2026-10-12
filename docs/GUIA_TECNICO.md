@@ -77,7 +77,11 @@ A cópia versionada da chave é criptografada com AES-256-CBC e PBKDF2, com 400.
 
 A impressão digital pública esperada está em [PRIMO_SIGNING_SHA256](../.github/PRIMO_SIGNING_SHA256). Para atualizar por cima preservando dados, mantenha o mesmo `applicationId`, a mesma chave e um `versionCode` crescente.
 
-O artefato do workflow é **Primo-APK-Release**, contendo `app-release.apk`, com retenção de **14 dias**. Na consulta de 12/10/2026 não havia GitHub Release publicada; a distribuição verificada era por artefatos do Actions.
+O artefato do workflow é **Primo-APK-Release**, contendo `app-release.apk`, com retenção de **14 dias**. Para distribuição ao usuário, a [Release v1.0.0](https://github.com/Daniel-SLima/Primo-Android/releases/tag/v1.0.0) disponibiliza o mesmo APK assinado como [Primo_v1.0.0_release.apk](https://github.com/Daniel-SLima/Primo-Android/releases/download/v1.0.0/Primo_v1.0.0_release.apk), sem depender da expiração do artefato do CI.
+
+O arquivo publicado foi gerado na [execução 38311802540](https://github.com/Daniel-SLima/Primo-Android/actions/runs/38311802540), do commit `2779bf2412e920c93e955e020af2b07e83b24287`. Antes da publicação, `apksigner` confirmou o certificado permanente e `aapt` confirmou `versionName=1.0.0`, `versionCode=14`, `applicationId=br.com.meutaxi.app` e `minSdk=26`.
+
+SHA-256 do APK: `ce53f436457069bb3ed9dc4f49977b36b94d036a77817b1a98c1f674caad66dd`.
 
 ### Migração histórica de APK debug
 
