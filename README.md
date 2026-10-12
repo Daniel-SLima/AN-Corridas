@@ -1,221 +1,158 @@
-# Primo — Seu parceiro das contas
+<p align="center">
+  <img src="app/src/main/res/drawable-nodpi/primo_mascot.png" width="110" alt="Mascote original do Primo, com uniforme azul e amarelo">
+</p>
 
-Aplicativo Android **offline e sem login** para registrar rapidamente corridas, gasolina, mecânico e metas de recebimento. Pensado para o Xiaomi Redmi 13C e outros aparelhos Android 8+.
+<h1 align="center">Primo</h1>
+<p align="center"><strong>Seu parceiro das contas</strong></p>
+<p align="center">Um jeito simples de registrar corridas, acompanhar ganhos e controlar gastos, sem complicação.</p>
 
-> **Status**: código-fonte da versão 0.9.1. O APK só pode ser considerado validado após compilar e testar num Android real. Não requer Android Studio para compilar via GitHub Actions.
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-8%2B-0B4F8A" alt="Android 8 ou superior">
+  <img src="https://img.shields.io/badge/Kotlin-nativo-0B4F8A" alt="Desenvolvido em Kotlin para Android nativo">
+  <img src="https://img.shields.io/badge/Offline-sem%20login-FFC928?labelColor=0B4F8A" alt="Offline e sem login">
+  <img src="https://img.shields.io/badge/Vers%C3%A3o-1.0.0-0B4F8A" alt="Versão 1.0.0">
+</p>
 
-## Funcionalidades
+<p align="center">
+  <a href="#conheça-o-primo">Conheça o app</a> ·
+  <a href="#registre-sem-sair-do-aplicativo-que-está-usando">Bolinha flutuante</a> ·
+  <a href="#instalação">Instalação</a> ·
+  <a href="docs/GUIA_TECNICO.md">Documentação técnica</a>
+</p>
 
-- Bolinha móvel com botão `+` por cima de outros aplicativos (após autorização do usuário), com ações **Corrida**, **Gasolina** e **Mecânico**.
-- Corrida: informa o valor, contabiliza uma corrida e permite origem Rua, 99 ou Uber Taxi e forma de pagamento.
-- Gasolina: valor do abastecimento. Mecânico: valor **e descrição do serviço**.
-- Resumos Hoje, Ontem, Semana (segunda a domingo), Mês e Outro dia.
-- Saldo parcial = valores de corridas menos gastos registrados; **não é lucro líquido**.
-- Histórico: ver, editar e excluir lançamentos.
-- Metas **diária e semanal independentes e opcionais**, definidas em R$, com porcentagem e restante; o progresso usa **apenas receitas de corridas**.
-- Mensagens bem-humoradas vêm **desligadas por padrão** (também ao atualizar da v0.2); podem ser ativadas manualmente nas configurações. Não há narração de áudio.
-- Registro via bolinha: o botão Salvar fica **verde com ✓ somente após gravar com sucesso**, as janelas fecham e a bolinha fica verde por aproximadamente 1 segundo, voltando depois ao `+` amarelo.
-- Enquanto a bolinha é movida, as ações abertas seguem sua posição e se adaptam ao espaço disponível; limitações dos recortes da tela devem ser testadas no dispositivo.
-- Backup JSON e restauração. Metas também são exportadas; backups antigos `meutaxi-backup-v1` continuam aceitos.
-- Marca Primo: identidade azul/amarelo, ícone e mascote na tela principal.
+## As contas do trabalho, em um só lugar
 
-## Build sem Android Studio
+Entre uma corrida e outra, é fácil perder a conta do que entrou, do que foi gasto no carro e de quanto falta para a meta. O Primo reúne essas informações em uma interface direta, com botões grandes e atalhos para o registro do dia a dia.
 
-1. Em GitHub, abra **Actions → Gerar APK Android assinado**.
-2. Aguarde o job `build` finalizar.
-3. Abra os **Artifacts** do job e baixe `Primo-APK-Release`.
-4. Extraia o ZIP para obter o APK release assinado e instale no Redmi 13C, permitindo instalação de fontes externas somente para essa ação.
+Desenvolvido inicialmente para o uso pessoal de um motorista, o aplicativo atende taxistas e quem trabalha com corridas de rua, 99 ou Uber Taxi. Funciona **offline, sem conta e sem login**, com os dados armazenados no próprio aparelho.
 
-O projeto usa Android Gradle Plugin 9.1.1, Java 17, Gradle 9.3.1 e Android SDK 36, com Kotlin compilado pelo plugin Android. Você pode compilar localmente usando `gradle :app:assembleDebug` se tiver o Android SDK.
+## Conheça o Primo
 
-**Assinatura permanente:** GitHub Actions gera somente APK release assinado; conserve a mesma chave, o applicationId e incremente o versionCode. O secret antigo ANDROID_KEYSTORE_BASE64 não é mais utilizado.
+<p align="center">
+  <img src="docs/images/primo-inicio.webp" height="420" alt="Início do Primo com valores recebidos, gastos, saldo parcial e atalhos de registro">
+  <img src="docs/images/primo-metas.webp" height="420" alt="Metas diária e semanal com progresso e valor restante">
+  <img src="docs/images/primo-historico.webp" height="420" alt="Histórico de corridas com filtros por período e ações de editar e excluir">
+</p>
+<p align="center"><strong>Início</strong> — veja o resultado do período · <strong>Metas</strong> — acompanhe o objetivo · <strong>Histórico</strong> — consulte e corrija</p>
 
-### Assinatura permanente (Primo 0.3.1 em diante)
+Consulte **Hoje, Ontem, Semana, Mês ou outro dia**. Veja os valores recebidos, as despesas registradas, o saldo parcial e a quantidade de corridas.
 
-Desde 0.3.1, o GitHub Actions **só produz APK release assinado**: se faltarem os três secrets necessários, ele falha em vez de criar um APK debug. O certificado é verificado antes e depois da compilação.
+> O saldo parcial é a receita de corridas menos as despesas lançadas. Ele não representa necessariamente o lucro líquido do motorista. Os valores das capturas são ilustrativos e não comprovam rendimentos reais.
 
-**Assinatura no GitHub:** o arquivo `.github/primo-release.jks.enc` contém somente uma cópia **criptografada** da chave, usando AES-256-CBC e PBKDF2 (400.000 iterações). A senha de criptografia é longa e aleatória, mantida exclusivamente no secret `ANDROID_KEYSTORE_PASSWORD`. A keystore ORIGINAL nunca deve ser enviada ao repositório. O antigo secret `ANDROID_KEYSTORE_BASE64` não é mais utilizado e pode ser removido do GitHub por segurança.
+## Registre sem sair do aplicativo que está usando
 
-1. Preserve o ZIP privado de assinatura entregue separadamente ao proprietário, em backup offline; ele é essencial para recuperar a chave e fazer futuras atualizações.
-2. Configure `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` em Settings → Secrets and variables → Actions → Repository secrets. O secret Base64 não é mais necessário.
-3. Abra Actions → Gerar APK Android assinado → Run workflow. Baixe o artefato `Primo-APK-Release`.
-4. **Migração da v0.3.0 debug:** antes de desinstalar, use Exportar backup. Instale a primeira release com assinatura permanente e use Importar backup. A chave privada da v0.3.0 debug não está disponível, portanto é necessária uma última desinstalação.
-5. Futuras versões devem manter o `applicationId`, a mesma keystore e `versionCode` crescente para atualizar por cima preservando registros.
+A **bolinha flutuante** deixa os atalhos do Primo disponíveis sobre outros aplicativos Android, mediante permissão de sobreposição. Toque no `+` amarelo, escolha o tipo de lançamento e registre o valor sem abrir a tela principal.
 
-Impressão digital pública SHA-256: `12:53:89:DE:DA:49:21:5B:78:19:4D:B9:31:2D:D1:E1:1E:86:DE:F7:97:E0:0E:07:80:59:02:96:AD:F4:BF:D3`.
+<p align="center">
+  <img src="docs/images/primo-bolinha.webp" width="520" alt="Menu real da bolinha do Primo sobre o Google Maps: Corrida, Gasolina, Mecânico, meta e botão de fechar; mapa desfocado por privacidade">
+</p>
+<p align="center"><em>Captura real sobre o Google Maps, recortada e com o mapa desfocado para preservar a privacidade.</em></p>
 
-**NUNCA** publique a keystore `.jks`, `primo-gh-secrets.env` ou senhas em commits, issues ou prints. O arquivo `.jks.enc` versionado é criptografado, mas deve continuar protegido por uma senha forte e secreta.
+- **Três atalhos:** Corrida, Gasolina e Mecânico.
+- **Posição ajustável:** arraste a bolinha e acomode-a perto de uma borda.
+- **Meta à vista:** confira quanto falta para a meta ativa, com prioridade para a diária.
+- **Controle simples:** feche pelo `X` e reative pelo app ou pelo widget na tela inicial.
+- **Confirmação de registro:** o formulário e a bolinha sinalizam em verde após salvar com sucesso.
 
-## Uso da bolinha no Xiaomi
+A bolinha depende das permissões e das restrições de bateria do Android; alguns aparelhos podem encerrar o serviço. O Primo oferece dicas e reativação manual. Faça os registros com o veículo parado.
 
-Dentro do Primo: toque **Permitir bolinha flutuante**, aceite a sobreposição e depois toque **Ativar bolinha flutuante**. Em versões do MIUI/HyperOS, pode ser necessário ajustar economia de bateria/execução em segundo plano nas configurações do aparelho. Isso só é confirmado testando no aparelho; não há root e o Primo não controla o app de corridas, o mapa ou outras telas.
+## Poucas informações, registros organizados
 
-Se a bolinha for encerrada pelo Android, reabra o Primo e a ative novamente. Ela não deve reiniciar escondida, sem solicitação do usuário.
+<p align="center">
+  <img src="docs/images/primo-nova-corrida.webp" width="220" alt="Formulário real de corrida com valor, origem e forma de recebimento">
+  <img src="docs/images/primo-gasolina.webp" width="220" alt="Formulário real de gasolina com campo de valor e botões Salvar e Cancelar">
+  <img src="docs/images/primo-mecanico.webp" width="220" alt="Formulário real de mecânico com valor e descrição do serviço">
+</p>
+<p align="center"><strong>Corrida</strong> — valor, origem e recebimento · <strong>Gasolina</strong> — valor do abastecimento · <strong>Mecânico</strong> — valor e descrição opcional</p>
 
-## Estrutura
+Nas corridas, selecione **Rua, 99 ou Uber Taxi** e a forma de recebimento: **Dinheiro, Pix, Cartão ou App**. As origens são informadas manualmente: o Primo não possui integração automática com essas plataformas.
 
-- `app/src/main/java/br/com/meutaxi/app/Entries.kt`: banco local SQLite, registros, moeda e backup.
-- `Goals.kt`: metas e preferências, cálculo de progressos.
-- `MainActivity.kt`: resumo, histórico, metas e configurações.
-- `FloatingService.kt`: sobreposição móvel e notificações.
-- `Ui.kt`: componentes visuais e formulários de registro.
-- `.github/workflows/android-apk.yml`: build automático e download do APK.
+Registre o abastecimento e as despesas de oficina quando necessário. Os lançamentos ficam no histórico e entram no fechamento do período.
 
-## Privacidade
+## Controle para o dia a dia
 
-Sem rastreadores, anúncios ou servidor. Os dados ficam no aparelho, sem internet exigida. O aplicativo não lê os dados privados de outros aplicativos. A restauração substitui registros atuais e solicita confirmação; faça exportação antes.
+| Recurso | Como ajuda |
+| --- | --- |
+| **Resumo financeiro** | Reúne receitas, despesas, saldo parcial e quantidade de corridas por período. O Resumo do dia consulta os dados sem apagar os registros. |
+| **Metas diária e semanal** | Objetivos independentes e opcionais, com progresso e valor restante. O cálculo considera apenas as receitas de corridas. |
+| **Histórico e correções** | Consulte períodos anteriores, edite lançamentos ou exclua com confirmação. Em Mais, confira o último lançamento para corrigir ou desfazer. |
+| **Fechamento em CSV** | Veja receitas por origem e pagamento, gastos com gasolina e mecânico e média por corrida. Baixe ou compartilhe o CSV com ganhos e gastos separados e período no nome do arquivo. |
+| **Backup JSON** | Exporte registros e metas para guardar uma cópia fora do aparelho. A importação substitui os registros atuais e pede confirmação antes da seleção do arquivo. |
+| **Tutoriais com o Primo** | O mascote guia o uso com destaque visual dos controles. Há um guia do app e uma simulação da bolinha, disponíveis novamente em Mais. Os guias não salvam lançamentos. |
 
-## Testes antes de entregar ao seu pai
+<p align="center">
+  <img src="docs/images/primo-fechamento.webp" width="260" alt="Aba Mais com ações de ver, baixar e compartilhar fechamento, corrigir registros e reativar a bolinha">
+</p>
+<p align="center"><em>Na aba Mais, fechamento, correções e atalhos ficam agrupados por assunto.</em></p>
 
-1. Dar autorização de sobreposição no Redmi 13C (MIUI ou HyperOS).
-2. Abrir a 99, expandir o menu e arrastar a bolinha: os botões devem segui-la sem sair da tela. Registrar corrida com o aparelho parado e conferir o ✓ verde e fechamento do menu.
-3. Registrar gasolina e mecânico com descrição, verificar soma e edição.
-4. Configurar meta diária e semanal, registrar corrida, verificar progresso e restante.
-5. Reiniciar o aplicativo e verificar se os dados persistiram.
-6. Exportar backup, validar em instalação de teste sem apagar dados reais.
-7. Testar como o sistema lida com tela bloqueada, pouca bateria e fim do serviço.
+### Seus dados ficam no aparelho
 
-## Primo 0.4.0 — melhorias de usabilidade
+O Primo utiliza SQLite local, sem servidor, anúncios ou rastreadores. Não exige internet nem lê dados privados de outros aplicativos. Os arquivos de CSV e backup são exportados por ação do usuário; guarde as cópias em um local seguro.
 
-- Navegação inferior fixa entre **Início**, **Histórico**, **Metas** e **Mais**; o registro rápido continua disponível na tela inicial.
-- Ícones vetoriais uniformes para corrida, combustível, manutenção, menus e lançamentos, sem fonte externa nem Internet.
-- Animação curta ao mudar de área, ao expandir/recolher o menu flutuante, ao arrastar a bolinha e na barra das metas.
-- O menu da bolinha passa a usar a **altura medida** para se manter visível e segue o arraste, escolhendo automaticamente a área disponível à esquerda, à direita, acima ou abaixo.
-- A bolinha se acomoda perto da borda após arrastar. O gesto de arrastar **não desativa nem oculta** o serviço.
-- Metas ativas aparecem em formato compacto **abaixo de Mecânico** na tela principal e no menu da bolinha; prioridade para meta diária, com semanal como alternativa. Exibe apenas o valor que falta, ou **Meta concluída** após atingir o objetivo. Valores superiores à meta ficam nas telas de relatórios/metas.
-- Mantidas a assinatura permanente do release, o mesmo identificador do aplicativo, os dados locais SQLite e o formato dos backups, com `versionCode` incremental para atualizar por cima da instalação 0.3.1.
+**Antes de importar um backup, exporte os dados atuais.** A restauração substitui os lançamentos existentes. Para atualizar o aplicativo, instale por cima da versão anterior, sem desinstalar.
 
-### Checklist manual de QA para 0.4.0
+## Instalação
 
-1. Instalar **sem desinstalar** a 0.3.1 e confirmar que o histórico e as metas são preservados.
-2. Arrastar a bolinha para quatro cantos com o menu aberto: as três ações e a meta devem ficar acessíveis e acompanhar o movimento.
-3. Conferir o funcionamento da bolinha sobre a 99, sem sobrepor controles críticos, sempre com o carro parado.
-4. Salvar corrida, gasolina e mecânico; conferir confirmação verde e fechamento do painel.
-5. Comparar a meta compacta antes, no momento e após atingir o valor diário; testar também somente a semanal e nenhuma meta.
-6. Verificar a navegação fixa, consulta a outros dias, edição e exclusão no histórico, backup e restauração.
-7. Fechar, reabrir e reiniciar o aparelho; conferir dados preservados e que a bolinha não ativa sozinha se estiver desativada.
+O Primo é instalado por **APK** em aparelhos com **Android 8.0 ou superior**. Atualmente, a distribuição é feita pelo GitHub Actions; não há GitHub Release publicada com o APK.
 
-A compilação automática é um teste técnico do código. A compatibilidade específica com o Redmi 13C/MIUI/HyperOS precisa de validação no próprio aparelho.
+1. Abra [Actions → Gerar APK Android assinado](https://github.com/Daniel-SLima/Primo-Android/actions/workflows/android-apk.yml).
+2. Escolha uma execução bem-sucedida da versão desejada e abra os **Artifacts** do job `build`.
+3. Baixe **Primo-APK-Release** e extraia o ZIP para obter `app-release.apk`. O download de artefatos pelo GitHub exige uma sessão autenticada.
+4. Transfira o APK para o aparelho, abra-o e permita a instalação dessa origem se o Android solicitar.
+5. Se já utiliza o Primo, faça um backup e **instale por cima**, preservando os registros e as metas.
 
-## Primo 0.5.0 — fechamento, widget e refinamentos
+Os artefatos têm **retenção de 14 dias**. Se o arquivo expirou, o responsável pelo repositório pode executar o workflow novamente com os secrets de assinatura configurados. O processo exige a chave permanente e verifica o certificado do APK.
 
-- **Mais → Fechamento financeiro**: receitas por origem (Rua/99/Uber Taxi), por meio de pagamento, despesas separadas por gasolina/mecânico, total, média de corrida e saldo parcial.
-- **Exportar fechamento CSV** do período selecionado (Hoje, Ontem, Semana, Mês ou outro dia), com delimitador ponto e vírgula, UTF-8 BOM e tratamento de textos contra fórmulas maliciosas em planilhas.
-- **X ao lado da meta no menu flutuante**: fecha a bolinha imediatamente, mesmo sem meta configurada; tocar no + continua expandindo/recolhendo. Desligar não apaga nenhum lançamento.
-- **Widget Primo na tela inicial do Android**: toque para ativar e abrir o menu da bolinha, sem navegar pelas telas do app. Sem permissão de sobreposição, abre o Primo para orientar o usuário. Alguns sistemas MIUI/HyperOS podem exigir liberação de execução em segundo plano.
-- **Cabeçalho com mais respiro**: tratamento dos recortes/status bar no Android 15/16 e margem de 12dp no topo.
-- **Mecânico redesenhado**: chave inglesa vetorial mais clara, legível em tamanhos pequenos.
-- Mantidos o banco SQLite, o backup JSON, o identificador do app e assinatura fixa. `versionCode=6`; instalar sobre a 0.4.0.
+Consulte o [guia de entrega e verificação no aparelho](docs/ENTREGA_PRIMO_1.0.0.md) para conferir a instalação e o primeiro uso.
 
-### QA sugerido 0.5.0
+## Primeiros passos
 
-1. Atualizar a 0.4.0 diretamente sem perder as corridas nem metas.
-2. Conferir a margem do topo em Samsung Android 16 e Redmi 13C, com barra de status visível.
-3. Conferir ícone Mecânico na home, histórico e menu flutuante (sem cortes).
-4. Abrir a bolinha, tocar no X e verificar remoção imediata, sem apagar dados; reativar pelo widget.
-5. Adicionar o widget Primo pelo menu de widgets do launcher; tocar quando serviço estiver ligado, desligado e com sobreposição desautorizada.
-6. Fechamento: comparar Rua/99/Uber, formas de pagamento e gastos com o histórico.
-7. Exportar CSV e conferir acentos, valores negativos, separador e texto livre seguro na planilha.
-8. Testar confirmação verde, meta concluída e bolinha arrastável na nova versão.
+1. Instale o Primo e abra o aplicativo.
+2. Conheça o tutorial interativo; também é possível acessá-lo em **Mais → Aprenda com o Primo**.
+3. Em **Metas → Editar**, configure uma meta diária ou semanal, se desejar.
+4. Registre uma **Corrida**, selecionando a origem e como recebeu.
+5. Anote **Gasolina** e **Mecânico** quando houver uma despesa.
+6. Consulte o resumo no **Início** e confira ou corrija lançamentos no **Histórico**.
+7. Exporte periodicamente um JSON em **Mais → Segurança dos dados → Exportar backup**.
 
-## Primo 0.5.1 — estabilidade, compartilhamento e Excel
+Para usar o atalho sobre outros apps, conceda a permissão de sobreposição e ative a bolinha pelo Início. A aba Mais também permite solicitar a adição do widget, conforme o suporte do launcher.
 
-- Em **Mais**, o cartão **Primo na tela inicial** tenta sugerir a instalação do widget pelo launcher Android; oferece instruções se o aparelho não der suporte.
-- No Fechamento financeiro, **Salvar Excel / Compartilhar Excel** gera **.xlsx real**, com abas **Resumo** e **Lançamentos**, células de valores numéricos e acentuação Unicode sem erro de CSV.
-- Opções separadas: **CSV compatível (Windows-1252)** para o visualizador que mostrou DescriÃ§Ã£o e **CSV UTF-8 sem BOM** para importadores com seleção de charset. O formato recomendado é Excel.
-- Compartilhamento usa ContentProvider específico somente de leitura, com URI temporária para o seletor do Android; sem acesso aos registros internos.
-- Layout do fechamento apresenta origem, pagamento e gastos com descrições em duas linhas, evitando colisão com valores. Os totais são recalculados diretamente do SQLite a cada abertura.
-- Registro duplicado: o salvamento já impede duplo toque durante a confirmação. Edições agora conferem que realmente alteraram uma linha do banco antes de confirmar.
-- A tela refresca ao voltar e na virada da meia-noite (sem serviço extra), mantendo metas e histórico do novo dia consistentes. A restauração do backup segue validada e transacional quanto aos registros.
-- Mesmo applicationId, assinatura permanente e banco de dados. `versionCode=7`. Atualização direta por cima da versão 0.5.0.
+## Tecnologias e arquitetura
 
-### Testes
-1. Regressão do histórico após atualização e importação de backup; nunca desinstalar previamente.
-2. Comparar fechamento por origem e pagamento com valores reais de corridas, incluindo edição e exclusão.
-3. Confirmar os acentos em Excel (.xlsx), CSV compatível (Windows-1252) no visualizador Android e CSV UTF-8 em importador configurado para UTF-8.
-4. Compartilhar XLSX e CSV com WhatsApp ou outro app e conferir leitura sem expor o arquivo privado do banco.
-5. Testar sugestão do widget em Samsung e Xiaomi; fallback manual quando indisponível.
-6. Testar mudança de data com app aberto, repetição do botão Salvar e backup sem perda de dados.
+| Tecnologia | Uso no projeto |
+| --- | --- |
+| **Kotlin e Android nativo** | Activity, Views e layouts programáticos, componentes do sistema, formulários e tutoriais. |
+| **SQLite** | Persistência local via `SQLiteOpenHelper`, com valores monetários em centavos inteiros. |
+| **SharedPreferences** | Metas, preferências e estado dos tutoriais. |
+| **Android SDK** | `minSdk 26`, `targetSdk 35` e `compileSdk 36`; serviço em primeiro plano, sobreposição e widget. |
+| **Gradle e Java 17** | Gradle 9.3.1 e Android Gradle Plugin 9.1.1, com compilação Kotlin integrada ao plugin Android. |
+| **GitHub Actions e JUnit 4** | Testes unitários de fechamento/CSV e etapas dos tutoriais; geração e verificação do APK release assinado. |
 
-## Primo 0.6.0 — Fechamento simplificado
-- Em Mais, apenas três botões agrupados: Ver, Baixar e Compartilhar. A tela detalhada mantém somente Baixar e Compartilhar.
-- Formato único de saída: CSV compatível Windows-1252. Exportação Excel foi retirada do aplicativo. Nome do arquivo identifica o período.
-- Ícones vetoriais e áreas de toque grandes preservam a legibilidade.
-- Banco de dados, backup e certificado permanente mantidos; versão interna 8, maior do que os builds anteriores.
+O projeto tem um módulo `app`. A `MainActivity` organiza Início, Histórico, Metas e Mais; `Ui` reúne os componentes visuais e o formulário compartilhado. `EntriesDb` cuida dos registros, `GoalsStore` das metas e `ClosingReport` dos cálculos e do CSV. A bolinha é implementada em `FloatingService`; widget, compartilhamento e tutoriais têm componentes próprios.
 
-## Primo 0.7.0 — CSV com período e modo simples
+Com Java 17, Gradle 9.3.1 e Android SDK configurados, execute na raiz:
 
-- Nome de arquivo em downloads e compartilhamento: `primo-fechamento-AAAA-MM-DD_a_AAAA-MM-DD.csv`. O conteúdo identifica o início e o fim do período.
-- CSV único Windows-1252, com cabeçalho **Data, Hora, Categoria, Origem, Pagamento, Descrição, Ganhos (R$), Gastos (R$)**.
-- Seções consecutivas: **Corridas**, **Gasolina** e **Mecânico**. Resumo inicial com corridas, combustíveis, manutenções e saldo parcial. Despesas usam sua própria coluna, sem confundir receitas e gastos.
-- **Modo simples** (ativo inicialmente): botões grandes de Corrida, Gasolina e Mecânico na tela inicial, com menos texto. Pode ser desativado em Mais.
-- **Resumo do dia** na tela inicial: apresenta ganhos, despesas, número de corridas e saldo parcial, sem finalizar nem apagar nada.
-- **Desfazer último lançamento** em Mais: mostra o registro de inserção mais recente, exige confirmação para excluir ou permite editar.
-- Compartilhamento usa URI temporária limitada a arquivos CSV com nome de período, sem expor o banco.
-- Banco SQLite e assinatura permanente não foram alterados; versão interna aumentada para 9.
+```sh
+gradle :app:testDebugUnitTest
+gradle :app:assembleDebug
+```
 
-### QA 0.7.0
-1. Atualizar por cima da 0.6.0 sem perder as 877 entradas da base fictícia ou registros reais.
-2. Exportar Hoje, Semana, Mês e Dia; conferir intervalo no nome **e** no CSV, tanto no download quanto no WhatsApp.
-3. Confirmar linhas diárias e seções Corridas, Gasolina e Mecânico, com ganhos e gastos em colunas distintas.
-4. Conferir Saldo parcial = recebido menos gastos, incluindo dias só com despesas.
-5. Ativar/desativar Modo simples; reiniciar e conferir preferência salva.
-6. Resumo do dia: verificar corridas/recebido/gastos; não deve apagar informações.
-7. Desfazer último: Cancelar, Editar e Excluir; exigir confirmação; verificar recálculo.
-8. Stress-test: histórico extenso, mudança de dia, salvar na bolinha e backup/restauração.
+Os testes automatizados não substituem a validação das permissões, da sobreposição e do visual em um aparelho Android. Mais detalhes de build, assinatura e compatibilidade estão no [guia técnico](docs/GUIA_TECNICO.md).
 
-## Primo 0.7.1 — ajustes após o teste no Samsung
+## Projeto e desenvolvimento
 
-- Removido o **Modo simples** da tela inicial e das configurações. Restaurados os botões, espaçamentos e saudação da interface aprovada anteriormente. **Resumo do dia** e **Desfazer último lançamento** permanecem.
-- A meta dentro da bolinha foi redesenhada em duas linhas com altura 64 dp e menu com largura 266 dp; evita o corte do valor ao lado do X e preserva o reposicionamento nas bordas.
-- A compatibilidade do CSV agora prioriza leitura sem caracteres quebrados em qualquer interpretador (Google Sheets, Excel e WhatsApp): textos no arquivo são normalizados em ASCII legível, sem mudar os acentos que continuam salvos no app e no backup. Por exemplo, `Descrição` → `Descricao`, `Mecânico` → `Mecanico`, `óleo` → `oleo`. As datas, valores, categorias e nome com período não mudam.
-- Regressão automática do CSV, cálculos, escapamento de fórmulas, 1.000 registros e consistência dos resultados.
-- Mesma assinatura fixa, applicationId e dados locais. `versionCode=10`; atualização direta por cima da 0.7.0.
+O Primo é um projeto independente de desenvolvimento Android, criado inicialmente para ajudar um motorista a organizar as contas do trabalho. A versão **1.0.0** consolida o escopo validado da 0.9.1, mantendo a identidade azul e amarela, o mascote e os fluxos existentes.
 
-## Primo 0.8.0 — piloto de trabalho diário
+A documentação de evolução e os cuidados de atualização continuam disponíveis:
 
-- A versão **0.7.1 foi aprovada em 5/5 testes manuais**. A 0.8.0 mantém o mesmo visual e funcionalidades validadas.
-- O **Resumo do dia** oferece **Corrigir última** quando há um lançamento registrado hoje. A opção abre a edição existente sem apagar nem duplicar dados.
-- Em **Mais → Pronto para trabalhar**, é possível verificar a permissão para sobreposição, conferir a última data de exportação de backup registrada pelo Primo neste aparelho e reativar manualmente a bolinha.
-- **Dicas para manter ativa** explicam como chegar às configurações do Primo no Android e orientam usuários Xiaomi/Redmi. Não há tentativa de contornar restrições do sistema nem de iniciar o serviço sozinho ao ligar o aparelho.
-- O aviso **Último backup** só atualiza após a exportação finalizar sem erro; depois de importar outra base de registros, a indicação anterior é limpa para não dar falsa segurança.
-- Serviço de bolinha agora só cria a sobreposição quando o serviço em primeiro plano foi realmente iniciado com sucesso.
-- Sem novo login, rede ou banco. Mantidos assinatura, applicationId, SQLite, backup JSON e CSV; `versionCode=11`.
-- Consulte `docs/PILOTO_PRIMO_0.8.0.md` para os testes de expediente e recuperação segura.
+- [Guia técnico e manutenção](docs/GUIA_TECNICO.md).
+- [Histórico completo e documentação do README anterior](docs/HISTORICO_README.md).
+- [Tutorial guiado do mascote](docs/TUTORIAL_PRIMO_0.9.0.md).
+- [Checklist de acabamento e regressão visual](docs/ACABAMENTO_PRIMO_0.9.1.md).
+- [Entrega da versão 1.0.0](docs/ENTREGA_PRIMO_1.0.0.md).
 
-## Primo 0.9.0 — Tutoriais guiados com o mascote
+## Licença e contribuição
 
-- **Primeira abertura após atualizar**: apresenta um convite opcional para conhecer o Primo; não bloqueia o aplicativo e não reaparece automaticamente depois de responder.
-- **Tutorial do app**: 11 etapas (boas-vindas, Corrida, Gasolina, Mecânico, Metas, Editar meta, Histórico, Mais, Fechamento, Backup e conclusão). Escurece a tela, destaca controles reais e avança por toque no destaque ou por Próximo.
-- **Tutorial da bolinha**: 6 etapas com bolinha **simulada**, incluindo +, menu, meta, X e movimento. Não pede permissão de sobreposição e nunca salva lançamentos.
-- O mascote original aparece como avatar circular, com mini expressões, balões de conversa e botões **Voltar, Pular, Próximo e Concluir**.
-- **Mais → Aprenda com o Primo** permite rever cada tutorial separadamente.
-- Durante o tutorial, tocar na área iluminada **não executa** os botões reais: navega apenas entre etapas, evitando importação de backup, alterações de metas e novos registros.
-- Mesmo applicationId, SQLite, CSV, widget e assinatura permanente; `versionCode=12` permite atualizar a 0.8.0 diretamente.
+O repositório ainda não possui um arquivo `LICENSE`; uma licença de uso e distribuição não foi definida. A disponibilidade pública do código não concede, por si só, uma licença de código aberto.
 
-## Primo 0.9.1 — acabamento visual e tutorial
-
-- Corrigido o possível brilho branco temporário no canto superior esquerdo ao pressionar **Próximo**: o cartão do tutorial fica invisível até concluir a medição e o posicionamento, e o foco anterior é limpo imediatamente.
-- O recorte do spotlight agora é limitado ao retângulo **realmente visível** do alvo (respeitando rolagem, recorte do ScrollView e margens da tela), evitando recortes fora da área.
-- Criados componentes reutilizáveis `Ui.panel`, `Ui.sectionTitle` e `Ui.sectionButton` para padronizar superfícies, bordas, cantos, textos e altura dos botões.
-- A aba **Mais** passa a exibir grupos consistentes: **Fechamento financeiro**, **Corrigir registros**, **Bolinha e tela inicial**, **Metas e preferências**, **Aprenda com o Primo** e **Segurança dos dados**. Botões em azul preenchido para ação principal e azul-claro para ação secundária.
-- Cartões regulares de Início, Histórico, Metas e Fechamento reutilizam o mesmo estilo de painel neutro. Botões coloridos de Corrida/Gasolina/Mecânico e a identidade azul/amarela são mantidos.
-- Não alterados SQLite, dados, formato CSV, exportação/restore, assinatura, serviços, widget nem configuração das metas. `versionCode=13` para instalar por cima da 0.9.0.
-
-### Verificações de aceitação
-1. Atualizar por cima da 0.9.0 sem desinstalar e conferir entradas e metas.
-2. Abrir tutorial do aplicativo pelo menu Mais e avançar repetidamente: **nenhum brilho branco** no canto superior esquerdo.
-3. Testar Voltar/Próximo/Pular, destaque das metas e do botão Backup com a tela rolando; verificar que o alvo visível não fica cortado.
-4. Rever tutorial da bolinha e arrastar + fictício. Nenhuma corrida é criada.
-5. Conferir padronização dos 6 cartões da aba Mais, as duas cores de ação e seu tamanho.
-6. Conferir Início, Histórico, Metas, Fechamento e seus cartões.
-7. Conferir backup, CSV, reativar bolinha, widget e desfazer lançamento.
-
-## Primo 1.0.0 — versão estável para entrega pessoal (12/10/2026)
-
-- Fechamento de escopo da versão aprovada na homologação manual da 0.9.1 (cinco de cinco cenários aprovados).
-- **Nenhum recurso, regra financeira, layout, fluxo de backup ou serviço foi alterado nesta versão**; release dedicada ao identificador de versão e à entrega do APK assinado.
-- Mantidos `applicationId = br.com.meutaxi.app`, banco SQLite versão 1, assinatura permanente, histórico, bolinha, metas, CSV e os dois tutoriais.
-- Versão Android `versionCode = 14` e `versionName = "1.0.0"`. **Instale por cima da 0.9.1, sem desinstalar**.
-- Para utilização no Redmi 13C: salvar backup JSON atual, instalar APK, conceder sobreposição se desejar usar a bolinha, conferir a meta e executar uma corrida fictícia de teste (depois excluí-la). Na aba Mais há os dois tutoriais.
-- A bolinha depende das permissões e restrições de bateria do Android; a versão estável não garante que o sistema nunca a encerre.
+Sugestões e relatos de problemas podem ser enviados pelas [issues do projeto](https://github.com/Daniel-SLima/Primo-Android/issues). Ao relatar um problema, informe o modelo do aparelho, a versão do Android e os passos para reproduzir, sem incluir dados pessoais, backups reais ou credenciais.
